@@ -5,6 +5,8 @@ Tue, 29 Apr 2008 21:03:53 -0600  Sean Reifschneider  <jafo@tummy.com>
    * Patch from Jehiah Czebotar to catch an additional server disconnect
      situation.
 
+   * Patch from Andrey Petrov to add the "append" and "replace" commands.
+
 Tue, 18 Sep 2007 20:52:09 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    * Version 1.40

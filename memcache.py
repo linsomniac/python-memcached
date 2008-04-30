@@ -397,6 +397,27 @@ class Client(local):
         '''
         return self._set("add", key, val, time, min_compress_len)
 
+    def append(self, key, val, time=0, min_compress_len=0):
+        '''Append the value to the end of the existing key's value.
+
+        Only stores in memcache if key already exists.
+        Also see L{prepend}.
+
+        @return: Nonzero on success.
+        @rtype: int
+        '''
+        return self._set("append", key, val, time, min_compress_len)
+
+    def prepend(self, key, val, time=0, min_compress_len=0):
+        '''Prepend the value to the beginning of the existing key's value.
+
+        Only stores in memcache if key already exists.
+        Also see L{append}.
+
+        @return: Nonzero on success.
+        @rtype: int
+        '''
+        return self._set("prepend", key, val, time, min_compress_len)
 
     def replace(self, key, val, time=0, min_compress_len=0):
         '''Replace existing key with value.
@@ -408,6 +429,7 @@ class Client(local):
         @rtype: int
         '''
         return self._set("replace", key, val, time, min_compress_len)
+
     def set(self, key, val, time=0, min_compress_len=0):
         '''Unconditionally sets a key to a given value in the memcache.
 
