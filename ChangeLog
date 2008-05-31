@@ -1,3 +1,17 @@
+Sat, 31 May 2008 02:09:17 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   * Version 1.42
+
+   *  Paul Hummer set up a Launchpad project which I'm going to start using
+      to track patches and allow users to set up their own bzr branches and
+      manage marging in the upstream patches with their own.
+
+         https://launchpad.net/python-memcached
+
+   *  Patch from Jehiah Czebotar which does: Changing the calls to
+      mark_dead() to make them dereference tuples, reducing timeout on
+      sockets to 3 seconds, settable via setting Host._SOCKET_TIMEOUT.
+
 Tue, 29 Apr 2008 21:03:53 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    * Version 1.41

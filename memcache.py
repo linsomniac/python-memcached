@@ -292,7 +292,8 @@ class Client(local):
                 server.send_cmds(''.join(bigcmd))
             except socket.error, msg:
                 rc = 0
-                server.mark_dead(msg[1])
+                if type(msg) is types.TupleType: msg = msg[1]
+                server.mark_dead(msg)
                 dead_servers.append(server)
 
         # if any servers died on the way, don't expect them to respond.
@@ -305,6 +306,7 @@ class Client(local):
                 for key in keys:
                     server.expect("DELETED")
             except socket.error, msg:
+                if type(msg) is types.TupleType: msg = msg[1]
                 server.mark_dead(msg)
                 rc = 0
         return rc
@@ -330,7 +332,8 @@ class Client(local):
             server.send_cmd(cmd)
             server.expect("DELETED")
         except socket.error, msg:
-            server.mark_dead(msg[1])
+            if type(msg) is types.TupleType: msg = msg[1]
+            server.mark_dead(msg)
             return 0
         return 1
 
@@ -383,7 +386,8 @@ class Client(local):
             line = server.readline()
             return int(line)
         except socket.error, msg:
-            server.mark_dead(msg[1])
+            if type(msg) is types.TupleType: msg = msg[1]
+            server.mark_dead(msg)
             return None
 
     def add(self, key, val, time = 0, min_compress_len = 0):
@@ -555,7 +559,8 @@ class Client(local):
                     write("set %s %d %d %d\r\n%s\r\n" % (key, store_info[0], time, store_info[1], store_info[2]))
                 server.send_cmds(''.join(bigcmd))
             except socket.error, msg:
-                server.mark_dead(msg[1])
+                if type(msg) is types.TupleType: msg = msg[1]
+                server.mark_dead(msg)
                 dead_servers.append(server)
 
         # if any servers died on the way, don't expect them to respond.
@@ -572,6 +577,7 @@ class Client(local):
                     else:
                         notstored.append(prefixed_to_orig_key[key]) #un-mangle.
             except (_Error, socket.error), msg:
+                if type(msg) is types.TupleType: msg = msg[1]
                 server.mark_dead(msg)
         return notstored
 
@@ -630,7 +636,8 @@ class Client(local):
             server.send_cmd(fullcmd)
             return(server.expect("STORED") == "STORED")
         except socket.error, msg:
-            server.mark_dead(msg[1])
+            if type(msg) is types.TupleType: msg = msg[1]
+            server.mark_dead(msg)
         return 0
 
     def get(self, key):
@@ -653,8 +660,7 @@ class Client(local):
             value = self._recv_value(server, flags, rlen)
             server.expect("END")
         except (_Error, socket.error), msg:
-            if type(msg) is types.TupleType:
-                msg = msg[1]
+            if type(msg) is types.TupleType: msg = msg[1]
             server.mark_dead(msg)
             return None
         return value
@@ -707,7 +713,8 @@ class Client(local):
             try:
                 server.send_cmd("get %s" % " ".join(server_keys[server]))
             except socket.error, msg:
-                server.mark_dead(msg[1])
+                if type(msg) is types.TupleType: msg = msg[1]
+                server.mark_dead(msg)
                 dead_servers.append(server)
 
         # if any servers died on the way, don't expect them to respond.
@@ -726,6 +733,7 @@ class Client(local):
                         retvals[prefixed_to_orig_key[rkey]] = val   # un-prefix returned key.
                     line = server.readline()
             except (_Error, socket.error), msg:
+                if type(msg) is types.TupleType: msg = msg[1]
                 server.mark_dead(msg)
         return retvals
 
@@ -823,13 +831,14 @@ class _Host:
         if self.socket:
             return self.socket
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Python 2.3-ism:  s.settimeout(1)
+        if hasattr(s, 'settimeout'): s.settimeout(self._SOCKET_TIMEOUT)
         try:
             s.connect((self.ip, self.port))
         except socket.timeout, msg:
             self.mark_dead("connect: %s" % msg)
             return None
         except socket.error, msg:
+            if type(msg) is types.TupleType: msg = msg[1]
             self.mark_dead("connect: %s" % msg[1])
             return None
         self.socket = s
