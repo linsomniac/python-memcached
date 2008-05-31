@@ -18,6 +18,19 @@ Sat, 31 May 2008 02:09:17 -0600  Sean Reifschneider  <jafo@tummy.com>
    *  Fix from Steve Schwarz delete_multi() argument "seconds" not being
       correctly handled.  Changed it to "time" to match all other calls.
 
+   *  Patch from Peter Wilkinson to support using unix domain sockets.
+      He reports that tests succeed with with memcached daemons running,
+      the normal and a domain socket started via
+      "memcached -s memcached.socket".  I massaged it quite a bit.
+
+      To use domain sockets, use a connect string of "unix:/path/to/socket"
+      Note however that if you are using a host name of "unix", it will now
+      detect "unix:11211" as being a domain socket with the name "11211".
+      In this case, please use "inet:unix:11211".
+
+      Because of this, it is now preferred to use a connect string prefix
+      of "inet:" or "unix:".
+
 Tue, 29 Apr 2008 21:03:53 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    * Version 1.41
