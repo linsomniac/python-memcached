@@ -244,7 +244,7 @@ class Client(local):
         for s in self.servers:
             s.close_socket()
 
-    def delete_multi(self, keys, seconds=0, key_prefix=''):
+    def delete_multi(self, keys, time=0, key_prefix=''):
         '''
         Delete multiple keys in the memcache doing just one query.
 
@@ -262,7 +262,7 @@ class Client(local):
         the next one.
 
         @param keys: An iterable of keys to clear
-        @param seconds: number of seconds any subsequent set / update commands should fail. Defaults to 0 for no delay.
+        @param time: number of seconds any subsequent set / update commands should fail. Defaults to 0 for no delay.
         @param key_prefix:  Optional string to prepend to each key when sending to memcache.
             See docs for L{get_multi} and L{set_multi}.
 
@@ -284,7 +284,7 @@ class Client(local):
             write = bigcmd.append
             if time != None:
                  for key in server_keys[server]: # These are mangled keys
-                     write("delete %s %d\r\n" % (key, seconds))
+                     write("delete %s %d\r\n" % (key, time))
             else:
                 for key in server_keys[server]: # These are mangled keys
                   write("delete %s\r\n" % key)
@@ -315,7 +315,7 @@ class Client(local):
         '''Deletes a key from the memcache.
 
         @return: Nonzero on success.
-        @param seconds: number of seconds any subsequent set / update commands should fail. Defaults to 0 for no delay.
+        @param time: number of seconds any subsequent set / update commands should fail. Defaults to 0 for no delay.
         @rtype: int
         '''
         check_key(key)
@@ -566,6 +566,9 @@ class Client(local):
         # if any servers died on the way, don't expect them to respond.
         for server in dead_servers:
             del server_keys[server]
+
+        #  short-circuit if there are no servers, just return all keys
+        if not server_keys: return(mapping.keys())
 
         notstored = [] # original keys.
         for server, keys in server_keys.iteritems():
@@ -1052,6 +1055,23 @@ if __name__ == "__main__":
         print "OK"
     else:
         print "FAIL"
+
+    print "Testing set_multi() with no memcacheds running",
+    mc.disconnect_all()
+    errors = mc.set_multi({'keyhere' : 'a', 'keythere' : 'b'})
+    if errors != []:
+        print "FAIL"
+    else:
+        print "OK"
+
+    print "Testing delete_multi() with no memcacheds running",
+    mc.disconnect_all()
+    ret = mc.delete_multi({'keyhere' : 'a', 'keythere' : 'b'})
+    if ret != 1:
+        print "FAIL"
+    else:
+      print "OK"
+
 
 
 # vim: ts=4 sw=4 et :

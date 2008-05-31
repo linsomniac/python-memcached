@@ -12,6 +12,12 @@ Sat, 31 May 2008 02:09:17 -0600  Sean Reifschneider  <jafo@tummy.com>
       mark_dead() to make them dereference tuples, reducing timeout on
       sockets to 3 seconds, settable via setting Host._SOCKET_TIMEOUT.
 
+   *  Patches from Steve Schwarz for set_multi() to return the full set of
+      keys if all servers are down.  Previously would not report any keys.
+
+   *  Fix from Steve Schwarz delete_multi() argument "seconds" not being
+      correctly handled.  Changed it to "time" to match all other calls.
+
 Tue, 29 Apr 2008 21:03:53 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    * Version 1.41
