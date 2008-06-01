@@ -1,3 +1,10 @@
+Sun, 01 Jun 2008 15:05:11 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   * Version 1.43
+
+   *  eliott reported a bug in the 1.42 related to the socket timeout code
+      causing a traceback due to the timeout value not being set.
+
 Sat, 31 May 2008 02:09:17 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    * Version 1.42

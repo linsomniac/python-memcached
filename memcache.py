@@ -792,6 +792,7 @@ class Client(local):
 
 class _Host:
     _DEAD_RETRY = 30  # number of seconds before retrying a dead server.
+    _SOCKET_TIMEOUT = 3  #  number of seconds before sockets timeout.
 
     def __init__(self, host, debugfunc=None):
         if isinstance(host, types.TupleType):
