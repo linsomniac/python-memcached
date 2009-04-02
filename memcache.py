@@ -622,17 +622,20 @@ class Client(local):
                 pickler.persistent_id = self.persistent_id
             pickler.dump(val)
             val = file.getvalue()
-        #  silently do not store if value length exceeds maximum
-        if len(val) >= SERVER_MAX_VALUE_LENGTH: return(0)
 
         lv = len(val)
-        # We should try to compress if min_compress_len > 0 and we could import zlib and this string is longer than our min threshold.
+        # We should try to compress if min_compress_len > 0 and we could
+        # import zlib and this string is longer than our min threshold.
         if min_compress_len and _supports_compress and lv > min_compress_len:
             comp_val = compress(val)
-            #Only retain the result if the compression result is smaller than the original.
+            # Only retain the result if the compression result is smaller
+            # than the original.
             if len(comp_val) < lv:
                 flags |= Client._FLAG_COMPRESSED
                 val = comp_val
+
+        #  silently do not store if value length exceeds maximum
+        if len(val) >= SERVER_MAX_VALUE_LENGTH: return(0)
 
         return (flags, len(val), val)
 
