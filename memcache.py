@@ -160,7 +160,15 @@ class Client(local):
         self.unpickler = unpickler
         self.persistent_load = pload
         self.persistent_id = pid
-        
+
+        #  figure out the pickler style
+        file = StringIO()
+        try:
+            pickler = self.pickler(file, protocol = self.pickleProtocol)
+            self.picklerIsKeyword = True
+        except TypeError:
+            self.picklerIsKeyword = False
+
     def set_servers(self, servers):
         """
         Set the pool of servers used by this client.
@@ -606,7 +614,10 @@ class Client(local):
         else:
             flags |= Client._FLAG_PICKLE
             file = StringIO()
-            pickler = self.pickler(file, protocol=self.pickleProtocol)
+            if self.picklerIsKeyword:
+                pickler = self.pickler(file, protocol = self.pickleProtocol)
+            else:
+                pickler = self.pickler(file, self.pickleProtocol)
             if self.persistent_id:
                 pickler.persistent_id = self.persistent_id
             pickler.dump(val)
