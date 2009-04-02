@@ -231,7 +231,7 @@ class Client(local):
         Reset every host in the pool to an "alive" state.
         """
         for s in self.servers:
-            s.dead_until = 0
+            s.deaduntil = 0
 
     def _init_buckets(self):
         self.buckets = []
