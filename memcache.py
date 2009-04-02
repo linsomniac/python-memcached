@@ -193,7 +193,10 @@ class Client(local):
         data = []
         for s in self.servers:
             if not s.connect(): continue
-            name = '%s:%s (%s)' % ( s.ip, s.port, s.weight )
+            if s.family == socket.AF_INET:
+                name = '%s:%s (%s)' % ( s.ip, s.port, s.weight )
+            else:
+                name = 'unix:%s (%s)' % ( s.address, s.weight )
             s.send_cmd('stats')
             serverData = {}
             data.append(( name, serverData ))
