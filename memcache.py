@@ -129,6 +129,10 @@ class Client(local):
         pass
     class MemcachedKeyCharacterError(MemcachedKeyError):
         pass
+    class MemcachedKeyNoneError(MemcachedKeyError):
+        pass
+    class MemcachedKeyTypeError(MemcachedKeyError):
+        pass
     class MemcachedStringEncodingError(Exception):
         pass
 
@@ -946,20 +950,27 @@ def check_key(key, key_extra_len=0):
         Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
         Contains control characters  (Raises MemcachedKeyCharacterError).
         Is not a string (Raises MemcachedStringEncodingError)
+        Is an unicode string (Raises MemcachedStringEncodingError)
+        Is not a string (Raises MemcachedKeyError)
+        Is None (Raises MemcachedKeyError)
     """
     if type(key) == types.TupleType: key = key[1]
-    if not isinstance(key, str):
-        raise Client.MemcachedStringEncodingError, ("Keys must be str()'s, not"
+    if not key:
+        raise Client.MemcachedKeyNoneError, ("Key is None")
+    if isinstance(key, unicode):
+        raise Client.MemcachedStringEncodingError, ("Keys must be str()'s, not "
                 "unicode.  Convert your unicode strings using "
                 "mystring.encode(charset)!")
+    if not isinstance(key, str):
+        raise Client.MemcachedKeyTypeError, ("Key must be str()'s")
 
     if isinstance(key, basestring):
         if len(key) + key_extra_len > SERVER_MAX_KEY_LENGTH:
              raise Client.MemcachedKeyLengthError, ("Key length is > %s"
                      % SERVER_MAX_KEY_LENGTH)
         for char in key:
-          if ord(char) < 32 or ord(char) == 127:
-            raise Client.MemcachedKeyCharacterError, "Control characters not allowed"
+            if ord(char) < 32 or ord(char) == 127:
+                raise Client.MemcachedKeyCharacterError, "Control characters not allowed"
 
 def _doctest():
     import doctest, memcache

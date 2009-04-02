@@ -1,3 +1,5 @@
+   * Providing better error messages (patch provided by Johan Euphrosine).
+
 Sun, 01 Jun 2008 15:05:11 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    * Version 1.43
