@@ -1,3 +1,20 @@
+Thu, 02 Apr 2009 13:37:49 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   * Allowing spaces in the key.  (Patch provided by xmm on Launchpad)
+
+   * Detecting when the pickler needs a positional argument.  (Patch
+     provided by Brad Clements on Launchpad)
+
+   * Moving length check after the compression.  (Patch provided by user
+     Tom on Launchpad)
+
+   * Fixing arguments passed to the _Error if invalid read length.
+
+   * Fixing the representation of domain sockets.  (Patch provided by user
+     MTB on Launchpad)
+
+   * Changing a typo of dead_until.  (Patch provided by Shane R. Spencer)
+
    * Providing better error messages (patch provided by Johan Euphrosine).
 
 Sun, 01 Jun 2008 15:05:11 -0600  Sean Reifschneider  <jafo@tummy.com>
