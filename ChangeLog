@@ -1,5 +1,7 @@
 Thu, 02 Apr 2009 13:37:49 -0600  Sean Reifschneider  <jafo@tummy.com>
 
+   * Version 1.44
+
    * Allowing spaces in the key.  (Patch provided by xmm on Launchpad)
 
    * Detecting when the pickler needs a positional argument.  (Patch
