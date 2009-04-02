@@ -213,6 +213,30 @@ class Client(local):
 
         return(data)
 
+    def get_slabs(self):
+        data = []
+        for s in self.servers:
+            if not s.connect(): continue
+            if s.family == socket.AF_INET:
+                name = '%s:%s (%s)' % ( s.ip, s.port, s.weight )
+            else:
+                name = 'unix:%s (%s)' % ( s.address, s.weight )
+            serverData = {}
+            data.append(( name, serverData ))
+            s.send_cmd('stats items')
+            readline = s.readline
+            while 1:
+                line = readline()
+                if not line or line.strip() == 'END': break
+                item = line.split(' ', 2)
+                #0 = STAT, 1 = ITEM, 2 = Value
+                slab = item[1].split(':', 2)
+                #0 = items, 1 = Slab #, 2 = Name
+                if not serverData.has_key(slab[1]):
+                    serverData[slab[1]] = {}
+                serverData[slab[1]][slab[2]] = item[2]
+        return data
+
     def flush_all(self):
         'Expire all data currently in the memcache servers.'
         for s in self.servers:
