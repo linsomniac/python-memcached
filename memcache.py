@@ -32,7 +32,7 @@ The standard way to use memcache with a database is like this::
     obj = mc.get(key)
     if not obj:
         obj = backend_api.get(...)
-        mc.set(obj)
+        mc.set(key, obj)
 
     # we now have obj, and future passes through this code
     # will use the object from the cache.

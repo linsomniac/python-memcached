@@ -1,3 +1,6 @@
+   * Fix in the docstring for how to use the "set" method.  Found and fixed
+     by William McVey
+
 Thu, 02 Apr 2009 13:37:49 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    * Version 1.44
