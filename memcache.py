@@ -882,42 +882,14 @@ class Client(local):
         rlen += 2 # include \r\n
         buf = server.recv(rlen)
         if len(buf) != rlen:
-            raise _Error("received %d bytes when expecting %d" % (len(buf), rlen))
+            raise _Error("received %d bytes when expecting %d"
+                    % (len(buf), rlen))
 
         if len(buf) == rlen:
             buf = buf[:-2]  # strip \r\n
 
         if flags & Client._FLAG_COMPRESSED:
             buf = decompress(buf)
-
-    def check_key(self, key, key_extra_len=0):
-      """Checks sanity of key.  Fails if:
-          Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
-          Contains control characters  (Raises MemcachedKeyCharacterError).
-          Is not a string (Raises MemcachedStringEncodingError)
-          Is an unicode string (Raises MemcachedStringEncodingError)
-          Is not a string (Raises MemcachedKeyError)
-          Is None (Raises MemcachedKeyError)
-      """
-      if isinstance(key, tuple): key = key[1]
-      if not key:
-          raise Client.MemcachedKeyNoneError("Key is None")
-      if isinstance(key, unicode):
-          raise Client.MemcachedStringEncodingError("Keys must be str()'s, not "
-                  "unicode.  Convert your unicode strings using "
-                  "mystring.encode(charset)!")
-      if not isinstance(key, str):
-          raise Client.MemcachedKeyTypeError("Key must be str()'s")
-
-      if isinstance(key, basestring):
-          if self.server_max_key_lenght != 0 and \
-              len(key) + key_extra_len > self.server_max_key_lenght:
-              raise Client.MemcachedKeyLengthError("Key length is > %s"
-                       % self.server_max_key_lenght)
-          for char in key:
-              if ord(char) < 32 or ord(char) == 127:
-                  raise Client.MemcachedKeyCharacterError(
-                          "Control characters not allowed")
 
         if  flags == 0 or flags == Client._FLAG_COMPRESSED:
             # Either a bare string or a compressed string now decompressed...
@@ -940,6 +912,35 @@ class Client(local):
             self.debuglog("unknown flags on get: %x\n" % flags)
 
         return val
+
+    def check_key(self, key, key_extra_len=0):
+        """Checks sanity of key.  Fails if:
+            Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
+            Contains control characters  (Raises MemcachedKeyCharacterError).
+            Is not a string (Raises MemcachedStringEncodingError)
+            Is an unicode string (Raises MemcachedStringEncodingError)
+            Is not a string (Raises MemcachedKeyError)
+            Is None (Raises MemcachedKeyError)
+        """
+        if isinstance(key, tuple): key = key[1]
+        if not key:
+            raise Client.MemcachedKeyNoneError("Key is None")
+        if isinstance(key, unicode):
+            raise Client.MemcachedStringEncodingError(
+                    "Keys must be str()'s, not unicode.  Convert your unicode "
+                    "strings using mystring.encode(charset)!")
+        if not isinstance(key, str):
+            raise Client.MemcachedKeyTypeError("Key must be str()'s")
+
+        if isinstance(key, basestring):
+            if self.server_max_key_length != 0 and \
+                len(key) + key_extra_len > self.server_max_key_length:
+                raise Client.MemcachedKeyLengthError("Key length is > %s"
+                         % self.server_max_key_length)
+            for char in key:
+                if ord(char) < 33 or ord(char) == 127:
+                    raise Client.MemcachedKeyCharacterError(
+                            "Control characters not allowed")
 
 
 class _Host(object):
@@ -1084,6 +1085,7 @@ def _doctest():
     return doctest.testmod(memcache, globs=globs)
 
 if __name__ == "__main__":
+    failures = 0
     print "Testing docstrings..."
     _doctest()
     print "Running tests:"
@@ -1107,7 +1109,7 @@ if __name__ == "__main__":
                 print "OK"
                 return 1
             else:
-                print "FAIL"
+                print "FAIL"; failures = failures + 1
                 return 0
 
 
@@ -1128,7 +1130,7 @@ if __name__ == "__main__":
             if mc.delete("long"):
                 print "OK"
             else:
-                print "FAIL"
+                print "FAIL"; failures = failures + 1
         print "Testing get_multi ...",
         print mc.get_multi(["a_string", "an_integer"])
 
@@ -1143,23 +1145,25 @@ if __name__ == "__main__":
         if x == 43:
             print "OK"
         else:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
 
         print "Testing decr ...",
         x = mc.decr("an_integer", 1)
         if x == 42:
             print "OK"
         else:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
+        sys.stdout.flush()
 
         # sanity tests
         print "Testing sending spaces...",
+        sys.stdout.flush()
         try:
             x = mc.set("this has spaces", 1)
         except Client.MemcachedKeyCharacterError, msg:
             print "OK"
         else:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
 
         print "Testing sending control characters...",
         try:
@@ -1167,7 +1171,7 @@ if __name__ == "__main__":
         except Client.MemcachedKeyCharacterError, msg:
             print "OK"
         else:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
 
         print "Testing using insanely long key...",
         try:
@@ -1175,7 +1179,7 @@ if __name__ == "__main__":
         except Client.MemcachedKeyLengthError, msg:
             print "OK"
         else:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
 
         print "Testing sending a unicode-string key...",
         try:
@@ -1183,11 +1187,11 @@ if __name__ == "__main__":
         except Client.MemcachedStringEncodingError, msg:
             print "OK",
         else:
-            print "FAIL",
+            print "FAIL",; failures = failures + 1
         try:
             x = mc.set((u'a'*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
         except:
-            print "FAIL",
+            print "FAIL",; failures = failures + 1
         else:
             print "OK",
         import pickle
@@ -1197,25 +1201,25 @@ if __name__ == "__main__":
         except Client.MemcachedKeyLengthError:
             print "OK"
         else:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
 
         print "Testing using a value larger than the memcached value limit...",
         x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH)
         if mc.get('keyhere') == None:
             print "OK",
         else:
-            print "FAIL",
+            print "FAIL",; failures = failures + 1
         x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH + 'aaa')
         if mc.get('keyhere') == None:
             print "OK"
         else:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
 
         print "Testing set_multi() with no memcacheds running",
         mc.disconnect_all()
         errors = mc.set_multi({'keyhere' : 'a', 'keythere' : 'b'})
         if errors != []:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
         else:
             print "OK"
 
@@ -1223,9 +1227,14 @@ if __name__ == "__main__":
         mc.disconnect_all()
         ret = mc.delete_multi({'keyhere' : 'a', 'keythere' : 'b'})
         if ret != 1:
-            print "FAIL"
+            print "FAIL"; failures = failures + 1
         else:
             print "OK"
+
+    if failures > 0:
+        print '*** THERE WERE FAILED TESTS'
+        sys.exit(1)
+    sys.exit(0)
 
 
 # vim: ts=4 sw=4 et :
