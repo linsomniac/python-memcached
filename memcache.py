@@ -76,24 +76,6 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-# import JSON library
-try:
-    import json
-    _supports_json = True
-except ImportError:
-    try:
-        import simplejson as json
-        _supports_json = True
-    except ImportError:
-        _supports_json = False
-
-# See if we can deserialize PHP
-try:
-    import phpserialize
-    _supports_phpserialize = True
-except ImportError:
-    _supports_phpserialize = False
-
 
 __author__    = "Evan Martin <martine@danga.com>"
 __version__ = "1.31"
@@ -139,15 +121,10 @@ class Client(local):
     @sort: __init__, set_servers, forget_dead_hosts, disconnect_all, debuglog,\
            set, set_multi, add, replace, get, get_multi, incr, decr, delete, delete_multi
     """
-    _FLAG_SERIALIZED  = 1<<0
+    _FLAG_PICKLE  = 1<<0
     _FLAG_INTEGER = 1<<1
     _FLAG_LONG    = 1<<2
     _FLAG_COMPRESSED = 1<<3
-
-    # Serialization flags
-    _FLAG_PICKLE = 1
-    _FLAG_JSON = 2
-    _FLAG_PHP = 3
 
     _SERVER_RETRIES = 10  # how many times to try finding a free server.
 
@@ -194,7 +171,6 @@ class Client(local):
         self.unpickler = unpickler
         self.persistent_load = pload
         self.persistent_id = pid
-        self.serialization = self._FLAG_PICKLE
 
         #  figure out the pickler style
         file = StringIO()
@@ -203,22 +179,6 @@ class Client(local):
             self.picklerIsKeyword = True
         except TypeError:
             self.picklerIsKeyword = False
-
-    def set_serialization(self, serialization):
-        """
-        Set the serialization format for data sets, one of _FLAG_PICKLE,
-        _FLAG_JSON or _FLAG_PHP
-
-        @param serialization_format: _FLAG_PICKLE,_FLAG_JOSN,FLAG_PHP
-        """
-
-        # If our serialization is set to one of our values, use it
-        if serialization == Client._FLAG_JSON and _supports_json == True:
-            self.serialization = Client._FLAG_JSON
-        elif serialization == Client._FLAG_PHP and _supports_phpserialize == True:
-            self.serialization = Client._FLAG_PHP
-        else:
-            self.serialization = Client._FLAG_PICKLE
 
     def set_servers(self, servers):
         """
@@ -722,7 +682,7 @@ class Client(local):
             # force no attempt to compress this silly string.
             min_compress_len = 0
         else:
-            flags |= Client._FLAG_SERIALIZED
+            flags |= Client._FLAG_PICKLE
             file = StringIO()
             if self.picklerIsKeyword:
                 pickler = self.pickler(file, protocol = self.pickleProtocol)
@@ -926,6 +886,7 @@ class Client(local):
         if flags & Client._FLAG_COMPRESSED:
             buf = decompress(buf)
 
+
         if  flags == 0 or flags == Client._FLAG_COMPRESSED:
             # Either a bare string or a compressed string now decompressed...
             val = buf
@@ -933,9 +894,8 @@ class Client(local):
             val = int(buf)
         elif flags & Client._FLAG_LONG:
             val = long(buf)
-        elif flags & Client._FLAG_SERIALIZED:
+        elif flags & Client._FLAG_PICKLE:
             try:
-                # try and unpickle
                 file = StringIO(buf)
                 unpickler = self.unpickler(file)
                 if self.persistent_load:
@@ -944,21 +904,6 @@ class Client(local):
             except Exception, e:
                 self.debuglog('Pickle error: %s\n' % e)
                 val = None
-
-            if val is None and _supports_json:
-                # Try and deserialize via JSON
-                try:
-                    val = json.loads(buf)
-                except Exception, e:
-                    self.debuglog('Json error: %s\n' % e)
-
-            if val is None and _supports_phpserialize:
-                # Try and deserialize via PHP
-                try:
-                    val = phpserialize.loads(buf)
-                except Exception, e:
-                    self.debuglog('PHP Deserialization error: %s\n' % e)
-
         else:
             self.debuglog("unknown flags on get: %x\n" % flags)
 
