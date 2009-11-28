@@ -1,3 +1,12 @@
+   * Patches to make memcached more garbage-collectable.  Removes
+     "debugfunc" argument from _Host objects and changed to "debug"
+     boolean.  Patch by John McFarlane.
+
+   * Switching to a cmemcache compatible hash function.  Implemented by
+     André Cru and Ludvig Ericson.  To switch back to the old style, use:
+
+        memcached.useOldServerHashFunction()
+
    * Rejecting keys that have spaces in them.  Patch by Etienne Posthumus.
 
    * Fixing exception raising syntax.  Patch by Samuel Stauffer.
@@ -10,9 +19,6 @@
 
    * incr/decr were raising ValueError if the key did not exist, the
      docstring said it returned none.  Patch by Chihiro Sakatoku.
-
-   * Included cmemcache_hash, by permission of Ludvig Ericson.
-     To use, do "memcached.cmemcache_activate()".
 
    * Adding cas method, submitted by Ben Gutierrez.
 
