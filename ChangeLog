@@ -1,3 +1,8 @@
+   * Adding support for multiple deserialization formats including PHP and
+     JSON.  Patch by Gavin M. Roy.  PHP requires
+
+        http://pypi.python.org/pypi/phpserialize
+
    * Patches to make memcached more garbage-collectable.  Removes
      "debugfunc" argument from _Host objects and changed to "debug"
      boolean.  Patch by John McFarlane.
