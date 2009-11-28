@@ -144,7 +144,8 @@ class Client(local):
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
-                 pload=None, pid=None):
+                 pload=None, pid=None, server_max_key_length=SERVER_MAX_KEY_LENGTH,
+                 server_max_value_length=SERVER_MAX_VALUE_LENGTH):
         """
         Create a new Client object with the given list of servers.
 
@@ -171,6 +172,8 @@ class Client(local):
         self.unpickler = unpickler
         self.persistent_load = pload
         self.persistent_id = pid
+        self.server_max_key_length = server_max_key_length
+        self.server_max_value_length = server_max_value_length
 
         #  figure out the pickler style
         file = StringIO()
@@ -366,7 +369,7 @@ class Client(local):
         @param time: number of seconds any subsequent set / update commands should fail. Defaults to 0 for no delay.
         @rtype: int
         '''
-        check_key(key)
+        self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
@@ -424,7 +427,7 @@ class Client(local):
         return self._incrdecr("decr", key, delta)
 
     def _incrdecr(self, cmd, key, delta):
-        check_key(key)
+        self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
@@ -550,7 +553,7 @@ class Client(local):
         # Check it just once ...
         key_extra_len=len(key_prefix)
         if key_prefix:
-            check_key(key_prefix)
+            self.check_key(key_prefix)
 
         # server (_Host) -> list of unprefixed server keys in mapping
         server_keys = {}
@@ -568,7 +571,7 @@ class Client(local):
                 server, key = self._get_server(key_prefix + str_orig_key)
 
             # Now check to make sure key length is proper ...
-            check_key(str_orig_key, key_extra_len=key_extra_len)
+            self.check_key(str_orig_key, key_extra_len=key_extra_len)
 
             if not server:
                 continue
@@ -705,12 +708,13 @@ class Client(local):
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
-        if len(val) >= SERVER_MAX_VALUE_LENGTH: return(0)
+        if self.server_max_value_length != 0 and \
+           len(val) >= self.server_max_value_length: return(0)
 
         return (flags, len(val), val)
 
     def _set(self, cmd, key, val, time, min_compress_len = 0):
-        check_key(key)
+        self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
@@ -739,7 +743,7 @@ class Client(local):
         return 0
 
     def _get(self, cmd, key):
-        check_key(key)
+        self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return None
@@ -886,6 +890,34 @@ class Client(local):
         if flags & Client._FLAG_COMPRESSED:
             buf = decompress(buf)
 
+    def check_key(self, key, key_extra_len=0):
+      """Checks sanity of key.  Fails if:
+          Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
+          Contains control characters  (Raises MemcachedKeyCharacterError).
+          Is not a string (Raises MemcachedStringEncodingError)
+          Is an unicode string (Raises MemcachedStringEncodingError)
+          Is not a string (Raises MemcachedKeyError)
+          Is None (Raises MemcachedKeyError)
+      """
+      if isinstance(key, tuple): key = key[1]
+      if not key:
+          raise Client.MemcachedKeyNoneError("Key is None")
+      if isinstance(key, unicode):
+          raise Client.MemcachedStringEncodingError("Keys must be str()'s, not "
+                  "unicode.  Convert your unicode strings using "
+                  "mystring.encode(charset)!")
+      if not isinstance(key, str):
+          raise Client.MemcachedKeyTypeError("Key must be str()'s")
+
+      if isinstance(key, basestring):
+          if self.server_max_key_lenght != 0 and \
+              len(key) + key_extra_len > self.server_max_key_lenght:
+              raise Client.MemcachedKeyLengthError("Key length is > %s"
+                       % self.server_max_key_lenght)
+          for char in key:
+              if ord(char) < 32 or ord(char) == 127:
+                  raise Client.MemcachedKeyCharacterError(
+                          "Control characters not allowed")
 
         if  flags == 0 or flags == Client._FLAG_COMPRESSED:
             # Either a bare string or a compressed string now decompressed...
@@ -1043,33 +1075,6 @@ class _Host(object):
         else:
             return "unix:%s%s" % (self.address, d)
 
-def check_key(key, key_extra_len=0):
-    """Checks sanity of key.  Fails if:
-        Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
-        Contains control characters  (Raises MemcachedKeyCharacterError).
-        Is not a string (Raises MemcachedStringEncodingError)
-        Is an unicode string (Raises MemcachedStringEncodingError)
-        Is not a string (Raises MemcachedKeyError)
-        Is None (Raises MemcachedKeyError)
-    """
-    if isinstance(key, tuple): key = key[1]
-    if not key:
-        raise Client.MemcachedKeyNoneError("Key is None")
-    if isinstance(key, unicode):
-        raise Client.MemcachedStringEncodingError("Keys must be str()'s, not "
-                "unicode.  Convert your unicode strings using "
-                "mystring.encode(charset)!")
-    if not isinstance(key, str):
-        raise Client.MemcachedKeyTypeError("Key must be str()'s")
-
-    if isinstance(key, basestring):
-        if len(key) + key_extra_len > SERVER_MAX_KEY_LENGTH:
-             raise Client.MemcachedKeyLengthError("Key length is > %s"
-                     % SERVER_MAX_KEY_LENGTH)
-        for char in key:
-            if ord(char) < 33 or ord(char) == 127:
-                raise Client.MemcachedKeyCharacterError(
-                        "Control and space characters not allowed in keys")
 
 def _doctest():
     import doctest, memcache

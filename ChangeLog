@@ -1,3 +1,5 @@
+   * Per-connection max server key length.  Patch by Nicolas Delaby
+
    * Patches to make memcached more garbage-collectable.  Removes
      "debugfunc" argument from _Host objects and changed to "debug"
      boolean.  Patch by John McFarlane.
