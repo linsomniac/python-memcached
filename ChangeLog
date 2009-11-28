@@ -2,7 +2,7 @@
 
    * Patches to make memcached more garbage-collectable.  Removes
      "debugfunc" argument from _Host objects and changed to "debug"
-     boolean.  Patch by John McFarlane.
+     boolean.  Patches by John McFarlane and Aryeh Katz.
 
    * Switching to a cmemcache compatible hash function.  Implemented by
      André Cru and Ludvig Ericson.  To switch back to the old style, use:
