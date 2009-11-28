@@ -366,7 +366,8 @@ class Client(local):
         '''Deletes a key from the memcache.
 
         @return: Nonzero on success.
-        @param time: number of seconds any subsequent set / update commands should fail. Defaults to 0 for no delay.
+        @param time: number of seconds any subsequent set / update commands
+        should fail. Defaults to 0 for no delay.
         @rtype: int
         '''
         self.check_key(key)

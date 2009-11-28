@@ -9,4 +9,6 @@ echo "Updating files to $rev"
 sed --in-place 's/^Version: .*$/Version: '"$rev"/ PKG-INFO
 sed --in-place 's/^__version__ .*$/__version__ = "'"$rev"'"/' memcache.py
 
+pydoc -w ./memcache.py
+
 rm -f releasescript.auto
