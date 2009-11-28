@@ -1,3 +1,7 @@
+Sat, 28 Nov 2009 01:07:42 -0700  Sean Reifschneider  <jafo@tummy.com>
+
+   * Version 1.45
+
    * Per-connection max server key length.  Patch by Nicolas Delaby
 
    * Patches to make memcached more garbage-collectable.  Removes
