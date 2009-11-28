@@ -1059,9 +1059,9 @@ def check_key(key, key_extra_len=0):
              raise Client.MemcachedKeyLengthError("Key length is > %s"
                      % SERVER_MAX_KEY_LENGTH)
         for char in key:
-            if ord(char) < 32 or ord(char) == 127:
+            if ord(char) < 33 or ord(char) == 127:
                 raise Client.MemcachedKeyCharacterError(
-                        "Control characters not allowed")
+                        "Control and space characters not allowed in keys")
 
 def _doctest():
     import doctest, memcache

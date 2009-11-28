@@ -1,3 +1,5 @@
+   * Rejecting keys that have spaces in them.  Patch by Etienne Posthumus.
+
    * Fixing exception raising syntax.  Patch by Samuel Stauffer.
 
    * Optimizations in read code.  Patch by Samuel Stauffer.
