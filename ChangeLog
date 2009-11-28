@@ -1,3 +1,11 @@
+   * Fixing exception raising syntax.  Patch by Samuel Stauffer.
+
+   * Optimizations in read code.  Patch by Samuel Stauffer.
+
+   * Changing classes to be newstyle.  Patch by Samuel Stauffer.
+
+   * Changed "has_key" to "in".  Patch by Samuel Stauffer.
+
    * incr/decr were raising ValueError if the key did not exist, the
      docstring said it returned none.  Patch by Chihiro Sakatoku.
 
