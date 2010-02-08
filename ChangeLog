@@ -1,3 +1,8 @@
+   * Changing the license to the PSF License.
+
+   * Removing Evan's e-mail address at his request, changing authorship to
+     Sean.
+
 Sat, 28 Nov 2009 01:07:42 -0700  Sean Reifschneider  <jafo@tummy.com>
 
    * Version 1.45

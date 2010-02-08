@@ -77,10 +77,12 @@ except ImportError:
     from StringIO import StringIO
 
 
-__author__    = "Evan Martin <martine@danga.com>"
+#  Original author: Evan Martin of Danga Interactive
+__author__    = "Sean Reifschneider <jafo-memcached@tummy.com>"
 __version__ = "1.31"
 __copyright__ = "Copyright (C) 2003 Danga Interactive"
-__license__   = "Python"
+#  http://en.wikipedia.org/wiki/Python_Software_Foundation_License
+__license__   = "Python Software Foundation License"
 
 SERVER_MAX_KEY_LENGTH = 250
 #  Storing values larger than 1MB requires recompiling memcached.  If you do,
