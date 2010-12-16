@@ -872,6 +872,8 @@ class Client(local):
     def _expectvalue(self, server, line=None):
         if not line:
             line = server.readline()
+        if not line:
+            return (None, None, None)
 
         if line[:5] == 'VALUE':
             resp, rkey, flags, len = line.split()
