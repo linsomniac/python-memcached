@@ -445,7 +445,7 @@ class Client(local):
         try:
             server.send_cmd(cmd)
             line = server.readline()
-            if line.strip() =='NOT_FOUND': return None
+            if line == None or line.strip() =='NOT_FOUND': return None
             return int(line)
         except socket.error, msg:
             if isinstance(msg, tuple): msg = msg[1]
@@ -869,7 +869,7 @@ class Client(local):
         if not line:
             line = server.readline()
 
-        if line[:5] == 'VALUE':
+        if line and line[:5] == 'VALUE':
             resp, rkey, flags, len, cas_id = line.split()
             return (rkey, int(flags), int(len), int(cas_id))
         else:
@@ -878,10 +878,8 @@ class Client(local):
     def _expectvalue(self, server, line=None):
         if not line:
             line = server.readline()
-        if not line:
-            return (None, None, None)
 
-        if line[:5] == 'VALUE':
+        if line and line[:5] == 'VALUE':
             resp, rkey, flags, len = line.split()
             flags = int(flags)
             rlen = int(len)

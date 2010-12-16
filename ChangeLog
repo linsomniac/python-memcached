@@ -1,3 +1,12 @@
+   * Fixing Bug #509712: "TypeError: 'NoneType' object is unsubscriptable"
+     Also fixed some other similar code to not have issues with that.
+
+   * Fixing Bug #628339: Read from server sometimes fails.  Patch by Jeremy
+     Cowles.
+
+   * Fixing Bug #633553: Add stat arguments support to get_stats().  Patch
+     by Ryan Lane.
+
    * Changing the license to the PSF License.
 
    * Removing Evan's e-mail address at his request, changing authorship to
