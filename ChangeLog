@@ -3,6 +3,10 @@
    * Fixing Bug #509712: "TypeError: 'NoneType' object is unsubscriptable"
      Also fixed some other similar code to not have issues with that.
 
+   * Also related to 509712 and 628339: readline() now returns '' instead
+     of None when a server dies.  This should be safer.  Patch suggested by
+     Denis Otkidach.
+
    * Fixing Bug #628339: Read from server sometimes fails.  Patch by Jeremy
      Cowles.
 

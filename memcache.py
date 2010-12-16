@@ -1051,7 +1051,7 @@ class _Host(object):
                 self.mark_dead('Connection closed while reading from %s'
                         % repr(self))
                 self.buffer = ''
-                return None
+                return ''
             buf += data
         self.buffer = buf[index+2:]
         return buf[:index]
