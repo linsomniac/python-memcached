@@ -1,3 +1,6 @@
+   * Bug #680359: useOldServerHashFunction() is broken.  It now correctly
+     switches back to the old memcache hash function.
+
 Thu, 16 Dec 2010 02:07:40 -0700  Sean Reifschneider  <jafo@tummy.com>
 
    * Bug #471727: Changed the delete() code to explicitly check for both
