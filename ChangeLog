@@ -1,3 +1,7 @@
+   * When using set_multi and one value is too big, traceback
+     TypeError: 'int' object is unsubscriptable
+     Patch by Orjan Persson
+
    * Fixing Bug #529855: Server host can now be bare host without ":<port>".
      Fix proposed by Roger Binns.
 

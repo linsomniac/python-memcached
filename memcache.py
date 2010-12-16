@@ -359,7 +359,6 @@ class Client(local):
         for server in dead_servers:
             del server_keys[server]
 
-        notstored = [] # original keys.
         for server, keys in server_keys.iteritems():
             try:
                 for key in keys:
@@ -635,20 +634,26 @@ class Client(local):
 
         self._statlog('set_multi')
 
-
-
         server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(mapping.iterkeys(), key_prefix)
 
         # send out all requests on each server before reading anything
         dead_servers = []
+        notstored = [] # original keys.
 
         for server in server_keys.iterkeys():
             bigcmd = []
             write = bigcmd.append
             try:
                 for key in server_keys[server]: # These are mangled keys
-                    store_info = self._val_to_store_info(mapping[prefixed_to_orig_key[key]], min_compress_len)
-                    write("set %s %d %d %d\r\n%s\r\n" % (key, store_info[0], time, store_info[1], store_info[2]))
+                    store_info = self._val_to_store_info(
+                            mapping[prefixed_to_orig_key[key]],
+                            min_compress_len)
+                    if store_info:
+                        write("set %s %d %d %d\r\n%s\r\n" % (key, store_info[0],
+                                time, store_info[1], store_info[2]))
+                    else:
+                        notstored.append(prefixed_to_orig_key[key])
+                 server.send_cmds(''.join(bigcmd))
                 server.send_cmds(''.join(bigcmd))
             except socket.error, msg:
                 if isinstance(msg, tuple): msg = msg[1]
@@ -662,7 +667,6 @@ class Client(local):
         #  short-circuit if there are no servers, just return all keys
         if not server_keys: return(mapping.keys())
 
-        notstored = [] # original keys.
         for server, keys in server_keys.iteritems():
             try:
                 for key in keys:
