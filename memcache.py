@@ -198,8 +198,11 @@ class Client(local):
         self.servers = [_Host(s, self.debug) for s in servers]
         self._init_buckets()
 
-    def get_stats(self):
+    def get_stats(self, stat_args = None):
         '''Get statistics from each of the servers.
+
+        @param stat_args: Additional arguments to pass to the memcache
+            "stats" command.
 
         @return: A list of tuples ( server_identifier, stats_dictionary ).
             The dictionary contains a number of name/value pairs specifying
@@ -213,7 +216,10 @@ class Client(local):
                 name = '%s:%s (%s)' % ( s.ip, s.port, s.weight )
             else:
                 name = 'unix:%s (%s)' % ( s.address, s.weight )
-            s.send_cmd('stats')
+            if not stat_args:
+                s.send_cmd('stats')
+            else:
+                s.send_cmd('stats ' + stat_args)
             serverData = {}
             data.append(( name, serverData ))
             readline = s.readline
