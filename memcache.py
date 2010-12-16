@@ -968,7 +968,7 @@ class _Host(object):
         if not m:
             m = re.match(r'^(?P<proto>inet):'
                     r'(?P<host>[^:]+)(:(?P<port>[0-9]+))?$', host)
-        if not m: m = re.match(r'^(?P<host>[^:]+):(?P<port>[0-9]+)$', host)
+        if not m: m = re.match(r'^(?P<host>[^:]+)(:(?P<port>[0-9]+))?$', host)
         if not m:
             raise ValueError('Unable to parse connection string: "%s"' % host)
 
