@@ -60,6 +60,7 @@ serverHashFunction = cmemcache_hash
 
 def useOldServerHashFunction():
     """Use the old python-memcache server hash function."""
+    global serverHashFunction
     serverHashFunction = crc32
 
 try:
