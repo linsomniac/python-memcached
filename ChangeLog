@@ -1,3 +1,5 @@
+   * Fixing Bug #491164: Typo fix, "compession" -> "compRession".
+
    * Fixing Bug #509712: "TypeError: 'NoneType' object is unsubscriptable"
      Also fixed some other similar code to not have issues with that.
 

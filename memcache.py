@@ -69,7 +69,7 @@ except ImportError:
     _supports_compress = False
     # quickly define a decompress just in case we recv compressed data.
     def decompress(val):
-        raise _Error("received compressed data but I don't support compession (import error)")
+        raise _Error("received compressed data but I don't support compression (import error)")
 
 try:
     from cStringIO import StringIO
