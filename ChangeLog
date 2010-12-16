@@ -1,3 +1,5 @@
+Thu, 16 Dec 2010 02:07:40 -0700  Sean Reifschneider  <jafo@tummy.com>
+
    * Bug #471727: Changed the delete() code to explicitly check for both
      NOT_FOUND and DELETED as the responses and return successful for both.
      It also logs an error if one of these two responses is not found.
