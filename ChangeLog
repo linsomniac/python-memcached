@@ -1,3 +1,8 @@
+   * Bug #471727: Changed the delete() code to explicitly check for both
+     NOT_FOUND and DELETED as the responses and return successful for both.
+     It also logs an error if one of these two responses is not found.
+     Also added a test to ensure that delete() works.
+
    * When using set_multi and one value is too big, traceback
      TypeError: 'int' object is unsubscriptable
      Patch by Orjan Persson

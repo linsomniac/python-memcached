@@ -389,12 +389,14 @@ class Client(local):
 
         try:
             server.send_cmd(cmd)
-            server.expect("DELETED")
+            line = server.readline()
+            if line and line.strip() in ['DELETED', 'NOT_FOUND']: return 1
+            self.debuglog('Delete expected DELETED or NOT_FOUND, got: %s'
+                    % repr(line))
         except socket.error, msg:
             if isinstance(msg, tuple): msg = msg[1]
             server.mark_dead(msg)
-            return 0
-        return 1
+        return 0
 
     def incr(self, key, delta=1):
         """
@@ -653,7 +655,6 @@ class Client(local):
                                 time, store_info[1], store_info[2]))
                     else:
                         notstored.append(prefixed_to_orig_key[key])
-                 server.send_cmds(''.join(bigcmd))
                 server.send_cmds(''.join(bigcmd))
             except socket.error, msg:
                 if isinstance(msg, tuple): msg = msg[1]
@@ -1141,6 +1142,11 @@ if __name__ == "__main__":
         if test_setget("long", long(1<<30)):
             print "Testing delete ...",
             if mc.delete("long"):
+                print "OK"
+            else:
+                print "FAIL"; failures = failures + 1
+            print "Checking results of delete ..."
+            if mc.get("long") == None:
                 print "OK"
             else:
                 print "FAIL"; failures = failures + 1
