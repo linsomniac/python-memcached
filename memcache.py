@@ -1117,6 +1117,7 @@ if __name__ == "__main__":
                 return "%s (%s)" % (val, type(val))
             return "%s" % val
         def test_setget(key, val):
+            global failures
             print "Testing set/get {'%s': %s} ..." % (to_s(key), to_s(val)),
             mc.set(key, val)
             newval = mc.get(key)
