@@ -1,3 +1,7 @@
+   * Bug #728359: Make python-memcache work on memcache restarts.
+   Patch by Tarek Ziade', reviewed and further patches submitted by Hugo
+   Beauze'e-Luysse and Neganov Alexandr.
+
    * Bug #798342: If memcached server sends unknown flag in response for
    "get", results in:
       "UnboundLocalError: local variable 'val' referenced before assignment"
