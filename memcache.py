@@ -922,7 +922,7 @@ class Client(local):
                 val = unpickler.load()
             except Exception, e:
                 self.debuglog('Pickle error: %s\n' % e)
-                val = None
+                return None
         else:
             self.debuglog("unknown flags on get: %x\n" % flags)
 

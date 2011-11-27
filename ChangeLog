@@ -1,3 +1,8 @@
+   * Bug #798342: If memcached server sends unknown flag in response for
+   "get", results in:
+      "UnboundLocalError: local variable 'val' referenced before assignment"
+   Now returns "None" instead.  Patch by Sharoon Thomas
+
 Mon, 20 Dec 2010 19:14:17 -0700  Sean Reifschneider  <jafo@tummy.com>
 
    * Bug #680359: useOldServerHashFunction() is broken.  It now correctly
