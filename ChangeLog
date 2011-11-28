@@ -3,7 +3,7 @@
    length was <.  So I picked that keys and values *LONGER* than the
    specified max value are what is used, and added documentation and tests
    to that effect.  The test for max value tested that length plus 4, so
-   I've changed that to be that value plus 1.
+   I've changed that to be that value plus 1.  Issue found by matt-quru.
 
    * Bug #713488: Issues Invalid "delete" command.
    Protocol has changed so that the "delete" operation no longer takes a
