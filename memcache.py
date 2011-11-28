@@ -157,7 +157,8 @@ class Client(local):
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
-                 pload=None, pid=None, server_max_key_length=SERVER_MAX_KEY_LENGTH,
+                 pload=None, pid=None,
+                 server_max_key_length=SERVER_MAX_KEY_LENGTH,
                  server_max_value_length=SERVER_MAX_VALUE_LENGTH,
                  dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT,
                  cache_cas = False):
@@ -182,6 +183,10 @@ class Client(local):
         cached.  WARNING: This cache is not expired internally, if you have
         a long-running process you will need to expire it manually via
         "client.reset_cas(), or the cache can grow unlimited.
+        @param server_max_key_length: (default SERVER_MAX_KEY_LENGTH)
+        Data that is larger than this will not be sent to the server.
+        @param server_max_value_length: (default SERVER_MAX_VALUE_LENGTH)
+        Data that is larger than this will not be sent to the server.
         """
         local.__init__(self)
         self.debug = debug
@@ -759,7 +764,7 @@ class Client(local):
 
         #  silently do not store if value length exceeds maximum
         if self.server_max_value_length != 0 and \
-           len(val) >= self.server_max_value_length: return(0)
+           len(val) > self.server_max_value_length: return(0)
 
         return (flags, len(val), val)
 
@@ -1274,7 +1279,13 @@ if __name__ == "__main__":
 
         print "Testing using insanely long key...",
         try:
-            x = mc.set('a'*SERVER_MAX_KEY_LENGTH + 'aaaa', 1)
+            x = mc.set('a'*SERVER_MAX_KEY_LENGTH, 1)
+        except Client.MemcachedKeyLengthError, msg:
+            print "FAIL"; failures = failures + 1
+        else:
+            print "OK"
+        try:
+            x = mc.set('a'*SERVER_MAX_KEY_LENGTH + 'a', 1)
         except Client.MemcachedKeyLengthError, msg:
             print "OK"
         else:
