@@ -999,7 +999,7 @@ class Client(local):
                 raise Client.MemcachedKeyLengthError("Key length is > %s"
                          % self.server_max_key_length)
             for char in key:
-                if ord(char) < 33 or ord(char) == 127:
+                if ord(char) < 32 or ord(char) == 127:
                     raise Client.MemcachedKeyCharacterError(
                             "Control characters not allowed")
 
