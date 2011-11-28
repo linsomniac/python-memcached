@@ -410,7 +410,7 @@ class Client(local):
 
         @return: Nonzero on success.
         @param time: number of seconds any subsequent set / update commands
-        should fail. Defaults to 0 for no delay.
+        should fail. Defaults to None for no delay.
         @rtype: int
         '''
         self.check_key(key)
@@ -418,7 +418,7 @@ class Client(local):
         if not server:
             return 0
         self._statlog('delete')
-        if time != None:
+        if time != None and time != 0:
             cmd = "delete %s %d" % (key, time)
         else:
             cmd = "delete %s" % key
@@ -1219,6 +1219,19 @@ if __name__ == "__main__":
                 print "FAIL"; failures = failures + 1
         print "Testing get_multi ...",
         print mc.get_multi(["a_string", "an_integer"])
+
+        #  removed from the protocol
+        #if test_setget("timed_delete", 'foo'):
+        #    print "Testing timed delete ...",
+        #    if mc.delete("timed_delete", 1):
+        #        print "OK"
+        #    else:
+        #        print "FAIL"; failures = failures + 1
+        #    print "Checking results of timed delete ..."
+        #    if mc.get("timed_delete") == None:
+        #        print "OK"
+        #    else:
+        #        print "FAIL"; failures = failures + 1
 
         print "Testing get(unknown value) ...",
         print to_s(mc.get("unknown_value"))
