@@ -1,3 +1,9 @@
+   * Bug: #741090: cas cache can grow unbounded.  Default now is that the
+   cache is not used, unless the "Client()" object is created with
+   "cache_cas=True".  In that case, you need to have your own cas clearing
+   code, a simple one would be to use Client().reset_cas() to completely
+   clear the cas_ids cache.  Problem pointed out by Shaun Cutts.
+
    * Bug: #794456: Spaces in memcache keynames
    Now allow spaces in keys.  Proposed by cpaetzel.
 

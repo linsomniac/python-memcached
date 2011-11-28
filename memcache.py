@@ -159,7 +159,8 @@ class Client(local):
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
                  pload=None, pid=None, server_max_key_length=SERVER_MAX_KEY_LENGTH,
                  server_max_value_length=SERVER_MAX_VALUE_LENGTH,
-                 dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT):
+                 dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT,
+                 cache_cas = False):
         """
         Create a new Client object with the given list of servers.
 
@@ -177,6 +178,10 @@ class Client(local):
         server. Default to 30 s.
         @param socket_timeout: timeout in seconds for all calls to a server. Defaults
         to 3 seconds.
+        @param cache_cas: (default False) If true, cas operations will be
+        cached.  WARNING: This cache is not expired internally, if you have
+        a long-running process you will need to expire it manually via
+        "client.reset_cas(), or the cache can grow unlimited.
         """
         local.__init__(self)
         self.debug = debug
@@ -184,7 +189,8 @@ class Client(local):
         self.socket_timeout = socket_timeout
         self.set_servers(servers)
         self.stats = {}
-        self.cas_ids = {}
+        self.cache_cas = cache_cas
+        self.reset_cas()
 
         # Allow users to modify pickling/unpickling behavior
         self.pickleProtocol = pickleProtocol
@@ -202,6 +208,16 @@ class Client(local):
             self.picklerIsKeyword = True
         except TypeError:
             self.picklerIsKeyword = False
+
+    def reset_cas(self):
+        """
+        Reset the cas cache.  This is only used if the Client() object
+        was created with "cache_cas=True".  If used, this cache does not
+        expire internally, so it can grow unbounded if you do not clear it
+        yourself.
+        """
+        self.cas_ids = {}
+
 
     def set_servers(self, servers):
         """
@@ -803,7 +819,7 @@ class Client(local):
 
                 if cmd == 'gets':
                     rkey, flags, rlen, cas_id, = self._expect_cas_value(server)
-                    if rkey:
+                    if rkey and self.cache_cas:
                         self.cas_ids[rkey] = cas_id
                 else:
                     rkey, flags, rlen, = self._expectvalue(server)
