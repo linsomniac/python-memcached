@@ -1,3 +1,5 @@
+Sun, 27 Nov 2011 18:15:32 -0700  Sean Reifschneider  <jafo@tummy.com>
+
    * Bug #745633: Values of maximum size are not stored
    API inconsistency, max value length was tested for <= while max KEY
    length was <.  So I picked that keys and values *LONGER* than the
