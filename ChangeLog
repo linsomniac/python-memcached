@@ -1,3 +1,7 @@
+   * Bug #713451: server.expect("END") needs to be in a finally block
+   Expect an "END" when the _recv_value() raises an exception.
+   Patch by Jay Farrimond.
+
    * Bug: #741090: cas cache can grow unbounded.  Default now is that the
    cache is not used, unless the "Client()" object is created with
    "cache_cas=True".  In that case, you need to have your own cas clearing

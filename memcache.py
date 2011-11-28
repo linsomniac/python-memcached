@@ -826,8 +826,10 @@ class Client(local):
 
                 if not rkey:
                     return None
-                value = self._recv_value(server, flags, rlen)
-                server.expect("END")
+                try:
+                    value = self._recv_value(server, flags, rlen)
+                finally:
+                    server.expect("END")
             except (_Error, socket.error), msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
