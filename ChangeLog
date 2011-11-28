@@ -4,9 +4,6 @@
    code, a simple one would be to use Client().reset_cas() to completely
    clear the cas_ids cache.  Problem pointed out by Shaun Cutts.
 
-   * Bug: #794456: Spaces in memcache keynames
-   Now allow spaces in keys.  Proposed by cpaetzel.
-
    * Bug #728359: Make python-memcache work on memcache restarts.
    Patch by Tarek Ziade', reviewed and further patches submitted by Hugo
    Beauze'e-Luysse and Neganov Alexandr.
