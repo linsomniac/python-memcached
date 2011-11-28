@@ -1,3 +1,10 @@
+   * Bug #713488: Issues Invalid "delete" command.
+   Protocol has changed so that the "delete" operation no longer takes a
+   "time" argument.  It seems that some servers will refuse a "delete key
+   0" while others will accept it, but the official server will NOT accept
+   "delete key 1".  So I've changed it so that if no "time" argument is
+   specified, no time argument is sent to the server.
+
    * Bug #713451: server.expect("END") needs to be in a finally block
    Expect an "END" when the _recv_value() raises an exception.
    Patch by Jay Farrimond.
