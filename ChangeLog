@@ -1,3 +1,10 @@
+   * Bug #887765: Interrupted connection to memcache server can cause
+   inconsistencies.
+   Added "flush_on_reconnect" (defaults to off) to Client() which will
+   cause a client that has lost connection to a server and then reconnects
+   to flush the cache on the reconnect so that it doesn't get old values
+   from that server.  Patch by Daniel Benamy.
+
 Sun, 27 Nov 2011 18:15:32 -0700  Sean Reifschneider  <jafo@tummy.com>
 
    * Bug #745633: Values of maximum size are not stored
