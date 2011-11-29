@@ -1,3 +1,5 @@
+Mon, 29 Nov 2011 12:37:32 -0700  Sean Reifschneider  <jafo@tummy.com>
+
    * Bug #887765: Interrupted connection to memcache server can cause
    inconsistencies.
    Added "flush_on_reconnect" (defaults to off) to Client() which will
