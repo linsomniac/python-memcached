@@ -182,7 +182,7 @@ class Client(local):
         @param cache_cas: (default False) If true, cas operations will be
         cached.  WARNING: This cache is not expired internally, if you have
         a long-running process you will need to expire it manually via
-        "client.reset_cas(), or the cache can grow unlimited.
+        client.reset_cas(), or the cache can grow unlimited.
         @param server_max_key_length: (default SERVER_MAX_KEY_LENGTH)
         Data that is larger than this will not be sent to the server.
         @param server_max_value_length: (default SERVER_MAX_VALUE_LENGTH)
@@ -800,7 +800,8 @@ class Client(local):
 
             try:
                 server.send_cmd(fullcmd)
-                return(server.expect("STORED") == "STORED")
+                return(server.expect("STORED", raise_exception=True)
+                        == "STORED")
             except socket.error, msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
@@ -831,18 +832,20 @@ class Client(local):
                 rkey = flags = rlen = cas_id = None
 
                 if cmd == 'gets':
-                    rkey, flags, rlen, cas_id, = self._expect_cas_value(server)
+                    rkey, flags, rlen, cas_id, = self._expect_cas_value(server,
+                            raise_exception=True)
                     if rkey and self.cache_cas:
                         self.cas_ids[rkey] = cas_id
                 else:
-                    rkey, flags, rlen, = self._expectvalue(server)
+                    rkey, flags, rlen, = self._expectvalue(server,
+                            raise_exception=True)
 
                 if not rkey:
                     return None
                 try:
                     value = self._recv_value(server, flags, rlen)
                 finally:
-                    server.expect("END")
+                    server.expect("END", raise_exception=True)
             except (_Error, socket.error), msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
@@ -948,9 +951,9 @@ class Client(local):
                 server.mark_dead(msg)
         return retvals
 
-    def _expect_cas_value(self, server, line=None):
+    def _expect_cas_value(self, server, line=None, raise_exception=False):
         if not line:
-            line = server.readline()
+            line = server.readline(raise_exception)
 
         if line and line[:5] == 'VALUE':
             resp, rkey, flags, len, cas_id = line.split()
@@ -958,9 +961,9 @@ class Client(local):
         else:
             return (None, None, None, None)
 
-    def _expectvalue(self, server, line=None):
+    def _expectvalue(self, server, line=None, raise_exception=False):
         if not line:
-            line = server.readline()
+            line = server.readline(raise_exception)
 
         if line and line[:5] == 'VALUE':
             resp, rkey, flags, len = line.split()
@@ -1064,7 +1067,7 @@ class _Host(object):
         else:
             self.family = socket.AF_INET
             self.ip = hostData['host']
-            self.port = int(hostData.get('port', 11211))
+            self.port = int(hostData.get('port') or 11211)
             self.address = ( self.ip, self.port )
 
         self.deaduntil = 0
@@ -1130,7 +1133,11 @@ class _Host(object):
         """ cmds already has trailing \r\n's applied """
         self.socket.sendall(cmds)
 
-    def readline(self):
+    def readline(self, raise_exception=False):
+        """Read a line and return it.  If "raise_exception" is set,
+        raise _ConnectionDeadError if the read fails, otherwise return
+        an empty string.
+        """
         buf = self.buffer
         recv = self.socket.recv
         while True:
@@ -1141,14 +1148,17 @@ class _Host(object):
             if not data:
                 # connection close, let's kill it and raise
                 self.close_socket()
-                raise _ConnectionDeadError()
+                if raise_exception:
+                    raise _ConnectionDeadError()
+                else:
+                    return ''
 
             buf += data
         self.buffer = buf[index+2:]
         return buf[:index]
 
-    def expect(self, text):
-        line = self.readline()
+    def expect(self, text, raise_exception=False):
+        line = self.readline(raise_exception)
         if line != text:
             self.debuglog("while expecting '%s', got unexpected response '%s'"
                     % (text, line))
