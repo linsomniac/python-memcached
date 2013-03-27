@@ -6,3 +6,11 @@ for more information.
 This package was originally written by Evan Martin of Danga.
 Please do not contact Evan about maintenance.
 Sean Reifschneider of tummy.com, ltd. has taken over maintenance of it.
+
+Please report issues and submit code changes to the github repository at:
+
+   https://github.com/linsomniac/python-memcached
+
+For changes prior to 2013-03-26, see the old Launchpad repository at:
+
+   Historic issues: https://launchpad.net/python-memcached

@@ -1,3 +1,7 @@
+   *  Switching over to github for this project:
+
+         https://github.com/linsomniac
+
    * Bug #974632: _ConnectionDeadError sometimes was escaping the get/set
    code.  This should return to readline() not raising an exception, except
    in the case that it's called from the get/set().  Report from Gary
