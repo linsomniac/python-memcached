@@ -264,6 +264,8 @@ class Client(local):
             if not s.connect(): continue
             if s.family == socket.AF_INET:
                 name = '%s:%s (%s)' % ( s.ip, s.port, s.weight )
+            elif s.family == socket.AF_INET6:
+                name = '[%s]:%s (%s)' % ( s.ip, s.port, s.weight )
             else:
                 name = 'unix:%s (%s)' % ( s.address, s.weight )
             if not stat_args:
@@ -287,6 +289,8 @@ class Client(local):
             if not s.connect(): continue
             if s.family == socket.AF_INET:
                 name = '%s:%s (%s)' % ( s.ip, s.port, s.weight )
+            elif s.family == socket.AF_INET6:
+                name = '[%s]:%s (%s)' % ( s.ip, s.port, s.weight )
             else:
                 name = 'unix:%s (%s)' % ( s.address, s.weight )
             serverData = {}
@@ -1054,6 +1058,9 @@ class _Host(object):
         #  parse the connection string
         m = re.match(r'^(?P<proto>unix):(?P<path>.*)$', host)
         if not m:
+            m = re.match(r'^(?P<proto>inet6):'
+                    r'\[(?P<host>[^\[\]]+)\](:(?P<port>[0-9]+))?$', host)
+        if not m:
             m = re.match(r'^(?P<proto>inet):'
                     r'(?P<host>[^:]+)(:(?P<port>[0-9]+))?$', host)
         if not m: m = re.match(r'^(?P<host>[^:]+)(:(?P<port>[0-9]+))?$', host)
@@ -1064,6 +1071,11 @@ class _Host(object):
         if hostData.get('proto') == 'unix':
             self.family = socket.AF_UNIX
             self.address = hostData['path']
+        elif hostData.get('proto') == 'inet6':
+            self.family = socket.AF_INET6
+            self.ip = hostData['host']
+            self.port = int(hostData.get('port') or 11211)
+            self.address = ( self.ip, self.port )
         else:
             self.family = socket.AF_INET
             self.ip = hostData['host']
@@ -1187,6 +1199,8 @@ class _Host(object):
 
         if self.family == socket.AF_INET:
             return "inet:%s:%d%s" % (self.address[0], self.address[1], d)
+        elif self.family == socket.AF_INET6:
+            return "inet6:[%s]:%d%s" % (self.address[0], self.address[1], d)
         else:
             return "unix:%s%s" % (self.address, d)
 

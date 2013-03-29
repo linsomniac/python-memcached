@@ -1,3 +1,6 @@
+   *  Supports IPv6 connections using: "inet6:[fd00::32:19f7]:11000".
+      Patch by Romain Courteaud
+
    *  Switching over to github for this project:
 
          https://github.com/linsomniac
