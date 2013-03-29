@@ -12,3 +12,6 @@ sed --in-place 's/^__version__ .*$/__version__ = "'"$rev"'"/' memcache.py
 pydoc -w ./memcache.py
 
 rm -f releasescript.auto
+
+python setup.py sdist upload
+rm *.pyc dist python_memcached.egg-info
