@@ -484,7 +484,7 @@ class Client(local):
         returns 0, not -1.
 
         @param delta: Integer amount to decrement by (should be zero or greater).
-        @return: New value after decrementing.
+        @return: New value after decrementing or None on error.
         @rtype: int
         """
         return self._incrdecr("decr", key, delta)
@@ -493,7 +493,7 @@ class Client(local):
         self.check_key(key)
         server, key = self._get_server(key)
         if not server:
-            return 0
+            return None
         self._statlog(cmd)
         cmd = "%s %s %d" % (cmd, key, delta)
         try:

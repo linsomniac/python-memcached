@@ -1,3 +1,6 @@
+   *  incr/decr return None instead of 0 on server connection failure.
+      Suggested by Ivan Virabyan
+
    *  Supports IPv6 connections using: "inet6:[fd00::32:19f7]:11000".
       Patch by Romain Courteaud
 
