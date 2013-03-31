@@ -1,3 +1,6 @@
+   *  Doing a "set" after server goes away, raised AttributeError:
+      'NoneType' object has no attribute 'sendall'.  Patch by Ken Lalonde
+
    *  incr/decr return None instead of 0 on server connection failure.
       Suggested by Ivan Virabyan
 

@@ -816,8 +816,8 @@ class Client(local):
         except _ConnectionDeadError:
             # retry once
             try:
-                server._get_socket()
-                return _unsafe_set()
+                if server._get_socket():
+                    return _unsafe_set()
             except (_ConnectionDeadError, socket.error), msg:
                 server.mark_dead(msg)
             return 0
