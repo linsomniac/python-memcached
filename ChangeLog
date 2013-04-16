@@ -1,3 +1,5 @@
+   *  Included license file (pull request by "Philippe" pombredanne).
+
    *  Doing a "set" after server goes away, raised AttributeError:
       'NoneType' object has no attribute 'sendall'.  Patch by Ken Lalonde
 
