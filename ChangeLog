@@ -1,3 +1,5 @@
+   *  Converted unicode tests from using u'', patch from Eren Güve.
+
    *  Included license file (pull request by "Philippe" pombredanne).
 
    *  Doing a "set" after server goes away, raised AttributeError:

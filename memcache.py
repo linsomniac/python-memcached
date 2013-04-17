@@ -1336,13 +1336,13 @@ if __name__ == "__main__":
 
         print "Testing sending a unicode-string key...",
         try:
-            x = mc.set(u'keyhere', 1)
+            x = mc.set(unicode('keyhere'), 1)
         except Client.MemcachedStringEncodingError, msg:
             print "OK",
         else:
             print "FAIL",; failures = failures + 1
         try:
-            x = mc.set((u'a'*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
+            x = mc.set((unicode('a')*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
         except:
             print "FAIL",; failures = failures + 1
         else:
@@ -1356,7 +1356,8 @@ if __name__ == "__main__":
         else:
             print "FAIL"; failures = failures + 1
 
-        print "Testing using a value larger than the memcached value limit...",
+        print "Testing using a value larger than the memcached value limit..."
+        print 'NOTE: "MemCached: while expecting[...]" is normal...'
         x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH)
         if mc.get('keyhere') == None:
             print "OK",
