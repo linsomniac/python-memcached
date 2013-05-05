@@ -1,3 +1,11 @@
+   *  Client() now takes a "check_key" option, which defaults to True.
+      If False, it disables the checking of keys to ensure they have
+      acceptable size and are composed of non-control characters.
+      Suggested by Ben Hoyt.
+
+   *  Converting control character checking of keys based on performance
+      testing of alternatives by Ben Hoyt.
+
    *  Converted unicode tests from using u'', patch from Eren Güve.
 
    *  Included license file (pull request by "Philippe" pombredanne).

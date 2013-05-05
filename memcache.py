@@ -77,6 +77,8 @@ try:
 except ImportError:
     from StringIO import StringIO
 
+invalid_key_characters = ''.join(map(chr, range(33) + [127]))
+
 
 #  Original author: Evan Martin of Danga Interactive
 __author__    = "Sean Reifschneider <jafo-memcached@tummy.com>"
@@ -161,7 +163,7 @@ class Client(local):
                  server_max_key_length=SERVER_MAX_KEY_LENGTH,
                  server_max_value_length=SERVER_MAX_VALUE_LENGTH,
                  dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT,
-                 cache_cas = False, flush_on_reconnect=0):
+                 cache_cas = False, flush_on_reconnect=0, check_key=True):
         """
         Create a new Client object with the given list of servers.
 
@@ -194,6 +196,8 @@ class Client(local):
         back, those keys will map to it again. If it still has its data, get()s
         can read stale data that was overwritten on another server. This flag
         is off by default for backwards compatibility.
+        @param check_key: (default True) If True, the key is checked to
+        ensure it is the correct length and composed of the right characters.
         """
         local.__init__(self)
         self.debug = debug
@@ -204,6 +208,7 @@ class Client(local):
         self.stats = {}
         self.cache_cas = cache_cas
         self.reset_cas()
+        self.do_check_key = check_key
 
         # Allow users to modify pickling/unpickling behavior
         self.pickleProtocol = pickleProtocol
@@ -430,7 +435,8 @@ class Client(local):
         should fail. Defaults to None for no delay.
         @rtype: int
         '''
-        self.check_key(key)
+        if self.do_check_key:
+            self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
@@ -490,7 +496,8 @@ class Client(local):
         return self._incrdecr("decr", key, delta)
 
     def _incrdecr(self, cmd, key, delta):
-        self.check_key(key)
+        if self.do_check_key:
+            self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return None
@@ -615,7 +622,7 @@ class Client(local):
         """
         # Check it just once ...
         key_extra_len=len(key_prefix)
-        if key_prefix:
+        if key_prefix and self.do_check_key:
             self.check_key(key_prefix)
 
         # server (_Host) -> list of unprefixed server keys in mapping
@@ -634,7 +641,8 @@ class Client(local):
                 server, key = self._get_server(key_prefix + str_orig_key)
 
             # Now check to make sure key length is proper ...
-            self.check_key(str_orig_key, key_extra_len=key_extra_len)
+            if self.do_check_key:
+                self.check_key(str_orig_key, key_extra_len=key_extra_len)
 
             if not server:
                 continue
@@ -781,7 +789,8 @@ class Client(local):
         return (flags, len(val), val)
 
     def _set(self, cmd, key, val, time, min_compress_len = 0):
-        self.check_key(key)
+        if self.do_check_key:
+            self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
@@ -823,7 +832,8 @@ class Client(local):
             return 0
 
     def _get(self, cmd, key):
-        self.check_key(key)
+        if self.do_check_key:
+            self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return None
@@ -1036,10 +1046,9 @@ class Client(local):
                 len(key) + key_extra_len > self.server_max_key_length:
                 raise Client.MemcachedKeyLengthError("Key length is > %s"
                          % self.server_max_key_length)
-            for char in key:
-                if ord(char) < 33 or ord(char) == 127:
-                    raise Client.MemcachedKeyCharacterError(
-                            "Control characters not allowed")
+            if len(key) != len(key.translate(None, invalid_key_characters)):
+                raise Client.MemcachedKeyCharacterError(
+                        "Control characters not allowed")
 
 
 class _Host(object):
