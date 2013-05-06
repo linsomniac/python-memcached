@@ -1,6 +1,6 @@
 Mon, 06 May 2013 07:20:21 -0600  Sean Reifschneider  <jafo@tummy.com>
 
-   *  1.49 release.
+   *  1.50 release.
 
    *  Client() now takes a "check_keys" option, which defaults to True.
       If False, it disables the checking of keys to ensure they have

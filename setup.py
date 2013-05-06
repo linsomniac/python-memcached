@@ -6,7 +6,7 @@ import memcache
 setup(name="python-memcached",
       version=memcache.__version__,
       description="Pure python memcached client",
-      long_description=open("README").read(),
+      long_description=open("README.md").read(),
       author="Evan Martin",
       author_email="martine@danga.com",
       maintainer="Sean Reifschneider",
