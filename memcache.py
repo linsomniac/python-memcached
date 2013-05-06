@@ -82,7 +82,7 @@ invalid_key_characters = ''.join(map(chr, range(33) + [127]))
 
 #  Original author: Evan Martin of Danga Interactive
 __author__    = "Sean Reifschneider <jafo-memcached@tummy.com>"
-__version__ = "1.31"
+__version__ = "1.51"
 __copyright__ = "Copyright (C) 2003 Danga Interactive"
 #  http://en.wikipedia.org/wiki/Python_Software_Foundation_License
 __license__   = "Python Software Foundation License"

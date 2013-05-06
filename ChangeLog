@@ -1,3 +1,9 @@
+Mon, 06 May 2013 15:29:07 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   *  1.51 release.
+
+   *  Add a MANIFEST.in file, patch by Daniel Widerin.
+
 Mon, 06 May 2013 07:20:21 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    *  1.50 release.
