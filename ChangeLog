@@ -1,4 +1,8 @@
-   *  Client() now takes a "check_key" option, which defaults to True.
+Mon, 06 May 2013 07:20:21 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   *  1.49 release.
+
+   *  Client() now takes a "check_keys" option, which defaults to True.
       If False, it disables the checking of keys to ensure they have
       acceptable size and are composed of non-control characters.
       Suggested by Ben Hoyt.
