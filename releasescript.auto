@@ -14,4 +14,4 @@ pydoc -w ./memcache.py
 rm -f releasescript.auto
 
 python setup.py sdist upload
-rm *.pyc dist python_memcached.egg-info
+rm -rf *.pyc dist python_memcached.egg-info
