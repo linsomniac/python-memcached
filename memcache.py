@@ -663,34 +663,47 @@ class Client(local):
         1
 
 
-        This method is recommended over regular L{set} as it lowers the number of
-        total packets flying around your network, reducing total latency, since
-        your app doesn't have to wait for each round-trip of L{set} before sending
-        the next one.
+        This method is recommended over regular L{set} as it lowers the
+        number of total packets flying around your network, reducing
+        total latency, since your app doesn't have to wait for each
+        round-trip of L{set} before sending the next one.
 
         @param mapping: A dict of key/value pairs to set.
-        @param time: Tells memcached the time which this value should expire, either
-        as a delta number of seconds, or an absolute unix time-since-the-epoch
-        value. See the memcached protocol docs section "Storage Commands"
-        for more info on <exptime>. We default to 0 == cache forever.
-        @param key_prefix:  Optional string to prepend to each key when sending to memcache. Allows you to efficiently stuff these keys into a pseudo-namespace in memcache:
-            >>> notset_keys = mc.set_multi({'key1' : 'val1', 'key2' : 'val2'}, key_prefix='subspace_')
+        @param time: Tells memcached the time which this value should
+            expire, either as a delta number of seconds, or an absolute
+            unix time-since-the-epoch value. See the memcached protocol
+            docs section "Storage Commands" for more info on <exptime>. We
+            default to 0 == cache forever.
+        @param key_prefix:  Optional string to prepend to each key when
+            sending to memcache. Allows you to efficiently stuff these
+            keys into a pseudo-namespace in memcache:
+
+            >>> notset_keys = mc.set_multi(
+            ...     {'key1' : 'val1', 'key2' : 'val2'}, key_prefix='subspace_')
             >>> len(notset_keys) == 0
             True
-            >>> mc.get_multi(['subspace_key1', 'subspace_key2']) == {'subspace_key1' : 'val1', 'subspace_key2' : 'val2'}
+            >>> mc.get_multi(
+            ...     ['subspace_key1', 'subspace_key2'])
+            ...     == {'subspace_key1' : 'val1', 'subspace_key2' : 'val2'}
             True
 
-            Causes key 'subspace_key1' and 'subspace_key2' to be set. Useful in conjunction with a higher-level layer which applies namespaces to data in memcache.
-            In this case, the return result would be the list of notset original keys, prefix not applied.
+            Causes key 'subspace_key1' and 'subspace_key2' to be
+            set. Useful in conjunction with a higher-level layer which
+            applies namespaces to data in memcache.  In this case, the
+            return result would be the list of notset original keys,
+            prefix not applied.
 
-        @param min_compress_len: The threshold length to kick in auto-compression
-        of the value using the zlib.compress() routine. If the value being cached is
-        a string, then the length of the string is measured, else if the value is an
-        object, then the length of the pickle result is measured. If the resulting
-        attempt at compression yeilds a larger string than the input, then it is
-        discarded. For backwards compatability, this parameter defaults to 0,
-        indicating don't ever try to compress.
-        @return: List of keys which failed to be stored [ memcache out of memory, etc. ].
+        @param min_compress_len: The threshold length to kick in
+            auto-compression of the value using the zlib.compress()
+            routine. If the value being cached is a string, then
+            the length of the string is measured, else if the value
+            is an object, then the length of the pickle result is
+            measured. If the resulting attempt at compression yeilds
+            a larger string than the input, then it is discarded. For
+            backwards compatability, this parameter defaults to 0,
+            indicating don't ever try to compress.
+        @return: List of keys which failed to be stored [ memcache out of
+           memory, etc. ].
         @rtype: list
 
         '''
