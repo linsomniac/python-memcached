@@ -746,8 +746,7 @@ class Client(local):
         for server, keys in server_keys.iteritems():
             try:
                 for key in keys:
-                    line = server.readline()
-                    if line == 'STORED':
+                    if server.readline() == 'STORED':
                         continue
                     else:
                         notstored.append(prefixed_to_orig_key[key]) #un-mangle.
@@ -1173,12 +1172,19 @@ class _Host(object):
         an empty string.
         """
         buf = self.buffer
-        recv = self.socket.recv
+        if self.socket:
+            recv = self.socket.recv
+        else:
+            recv = None
+
         while True:
             index = buf.find('\r\n')
             if index >= 0:
                 break
-            data = recv(4096)
+            if recv:
+                data = recv(4096)
+            else:
+                data = ''
             if not data:
                 # connection close, let's kill it and raise
                 self.close_socket()

@@ -59,7 +59,7 @@ class test_Memcached_Set_Multi(unittest.TestCase):
         mapping = {'foo': 'FOO', 'bar': 'BAR'}
         bad_keys = client.set_multi(mapping)
 
-        self.assertEqual(bad_keys, 1)  #@@@ Fix this
+        self.assertEqual(sorted(bad_keys), ['bar', 'foo'])
 
         if DEBUG:
             print 'set_multi({0!r}) -> {1!r}'.format(mapping, bad_keys)
