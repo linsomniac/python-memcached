@@ -77,7 +77,12 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-invalid_key_characters = ''.join(map(chr, range(33) + [127]))
+avoid_string_translate = sys.version_info[:2] < (2, 6)
+if avoid_string_translate:
+    import re
+    valid_key_chars_re = re.compile('[\x21-\x7e\x80-\xff]+$')
+else:
+    invalid_key_characters = ''.join(map(chr, range(33) + [127]))
 
 
 #  Original author: Evan Martin of Danga Interactive
@@ -697,7 +702,8 @@ class Client(local):
 
         self._statlog('set_multi')
 
-        server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(mapping.iterkeys(), key_prefix)
+        server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
+                mapping.iterkeys(), key_prefix)
 
         # send out all requests on each server before reading anything
         dead_servers = []
@@ -1046,10 +1052,15 @@ class Client(local):
                 len(key) + key_extra_len > self.server_max_key_length:
                 raise Client.MemcachedKeyLengthError("Key length is > %s"
                          % self.server_max_key_length)
-            if len(key) != len(key.translate(None, invalid_key_characters)):
-                raise Client.MemcachedKeyCharacterError(
-                        "Control characters not allowed")
-
+            if avoid_string_translate:
+                if not valid_key_chars_re.match(key):
+                    raise Client.MemcachedKeyCharacterError(
+                            "Control characters not allowed")
+            else:
+                if len(key) != len(
+                        key.translate(None, invalid_key_characters)):
+                    raise Client.MemcachedKeyCharacterError(
+                            "Control characters not allowed")
 
 class _Host(object):
 
