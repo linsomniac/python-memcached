@@ -1,3 +1,11 @@
+Sun, 02 Jun 2013 01:08:26 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   *  1.52 release.
+
+   *  Changing check_keys to use re.match() instead of str.translate(),
+      because re.match() works with Python < 2.6.
+      Found by Giovanni Di Milia.
+
 Mon, 06 May 2013 15:29:07 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    *  1.51 release.
