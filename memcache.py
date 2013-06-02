@@ -82,7 +82,7 @@ valid_key_chars_re = re.compile('[\x21-\x7e\x80-\xff]+$')
 
 #  Original author: Evan Martin of Danga Interactive
 __author__    = "Sean Reifschneider <jafo-memcached@tummy.com>"
-__version__ = "1.51"
+__version__ = "1.52"
 __copyright__ = "Copyright (C) 2003 Danga Interactive"
 #  http://en.wikipedia.org/wiki/Python_Software_Foundation_License
 __license__   = "Python Software Foundation License"
