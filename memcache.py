@@ -682,9 +682,7 @@ class Client(local):
             ...     {'key1' : 'val1', 'key2' : 'val2'}, key_prefix='subspace_')
             >>> len(notset_keys) == 0
             True
-            >>> mc.get_multi(
-            ...     ['subspace_key1', 'subspace_key2'])
-            ...     == {'subspace_key1' : 'val1', 'subspace_key2' : 'val2'}
+            >>> mc.get_multi(['subspace_key1', 'subspace_key2']) == {'subspace_key1' : 'val1', 'subspace_key2' : 'val2'}
             True
 
             Causes key 'subspace_key1' and 'subspace_key2' to be
@@ -1175,19 +1173,16 @@ class _Host(object):
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = None
+            recv = lambda bufsize: ''
 
         while True:
             index = buf.find('\r\n')
             if index >= 0:
                 break
-            if recv:
-                data = recv(4096)
-            else:
-                data = ''
+            data = recv(4096)
             if not data:
                 # connection close, let's kill it and raise
-                self.close_socket()
+                self.mark_dead('connection closed in readline()')
                 if raise_exception:
                     raise _ConnectionDeadError()
                 else:

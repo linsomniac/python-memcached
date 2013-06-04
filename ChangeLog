@@ -1,3 +1,14 @@
+   *  Fixing set_multi() so that if the server closes the connection
+      it will no longer raise AttributeError.  Issue found and resolution
+      reviewed by Ben Hoyt.
+
+   *  readline() now will mark the connection dead if the read fails.
+      It was just closing it before.  This is related to the set_multi()
+      change but worth noting separately.  Thanks to Ben Hoyt.
+
+   *  Discussion of the above:
+      https://github.com/linsomniac/python-memcached/commit/b7054a964aed0e6d86e853e60aab09cd0183b9f6#commitcomment-3337557
+
 Sun, 02 Jun 2013 01:08:26 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    *  1.52 release.
