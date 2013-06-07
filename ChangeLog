@@ -1,3 +1,7 @@
+Sun, 07 Jun 2013 11:12:18 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   *  1.53 release.
+
    *  Fixing set_multi() so that if the server closes the connection
       it will no longer raise AttributeError.  Issue found and resolution
       reviewed by Ben Hoyt.
