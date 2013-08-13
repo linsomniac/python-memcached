@@ -77,7 +77,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-valid_key_chars_re = re.compile('[\x21-\x7e\x80-\xff]+$')
+valid_key_chars_re = re.compile('[\x21-\x7e\xa0-\xff]+$')
 
 
 #  Original author: Evan Martin of Danga Interactive
@@ -160,8 +160,7 @@ class Client(local):
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
                  pload=None, pid=None,
-                 server_max_key_length=SERVER_MAX_KEY_LENGTH,
-                 server_max_value_length=SERVER_MAX_VALUE_LENGTH,
+                 server_max_key_length=None, server_max_value_length=None,
                  dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT,
                  cache_cas = False, flush_on_reconnect=0, check_keys=True):
         """
@@ -217,7 +216,11 @@ class Client(local):
         self.persistent_load = pload
         self.persistent_id = pid
         self.server_max_key_length = server_max_key_length
+        if self.server_max_key_length is None:
+            self.server_max_key_length = SERVER_MAX_KEY_LENGTH
         self.server_max_value_length = server_max_value_length
+        if self.server_max_value_length is None:
+            self.server_max_value_length = SERVER_MAX_VALUE_LENGTH
 
         #  figure out the pickler style
         file = StringIO()

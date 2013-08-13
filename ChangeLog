@@ -1,3 +1,6 @@
+   *  Setting the SERVER_MAX_* values after import did not work, despite
+      being documented to.  Reported by alexf101 on github.
+
 Sun, 07 Jun 2013 11:12:18 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    *  1.53 release.
