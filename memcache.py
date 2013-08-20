@@ -77,7 +77,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-valid_key_chars_re = re.compile('[\x21-\x7e\xa0-\xff]+$')
+valid_key_chars_re = re.compile('[\x21-\x7e\x80-\xff]+$')
 
 
 #  Original author: Evan Martin of Danga Interactive
