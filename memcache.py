@@ -1033,6 +1033,7 @@ class Client(local):
                 return None
         else:
             self.debuglog("unknown flags on get: %x\n" % flags)
+            raise ValueError('Unknown flags on get: %x' % flags)
 
         return val
 

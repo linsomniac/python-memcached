@@ -1,3 +1,6 @@
+   *  If unknown flags in get request, raises a value error rather than the
+      code bombing out.
+
    *  Setting the SERVER_MAX_* values after import did not work, despite
       being documented to.  Reported by alexf101 on github.
 
