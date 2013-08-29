@@ -291,6 +291,10 @@ class Client(local):
 
         return(data)
 
+    def quit(self):
+        for s in self.servers:
+            s.quit()
+
     def get_slabs(self):
         data = []
         for s in self.servers:
@@ -1214,6 +1218,12 @@ class _Host(object):
                         'read returned 0 length bytes' % ( len(buf), rlen ))
         self.buffer = buf[rlen:]
         return buf[:rlen]
+
+    def quit(self):
+        if self.socket:
+            self.send_cmd('quit')
+            self.socket.recv(1)
+            self.close_socket()
 
     def flush(self):
         self.send_cmd('flush_all')
