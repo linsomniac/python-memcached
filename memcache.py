@@ -291,7 +291,8 @@ class Client(local):
 
         return(data)
 
-    def quit(self):
+    def quit_all(self):
+        '''Send a "quit" command to all servers and wait for the connection to close.'''
         for s in self.servers:
             s.quit()
 
@@ -1220,9 +1221,20 @@ class _Host(object):
         return buf[:rlen]
 
     def quit(self):
+        '''Send a "quit" command to remote server and wait for connection to close.'''
         if self.socket:
+            # Using self.send_cmd, so no need for '\r\n'.
             self.send_cmd('quit')
+
+            # We can't close the local socket until the remote end processes the quit
+            # command and sends us a FIN packet.  When that happens, socket.recv()
+            # will stop blocking and return an empty string.  If we try to close the
+            # socket before then, the OS will think we're initiating the connection
+            # close and will put the socket into TIME_WAIT.
             self.socket.recv(1)
+
+            # At this point, socket should be in CLOSE_WAIT.  Closing the socket should
+            # release the port back to the OS.
             self.close_socket()
 
     def flush(self):
