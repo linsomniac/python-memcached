@@ -156,6 +156,8 @@ class Client(local):
         pass
     class MemcachedStringEncodingError(Exception):
         pass
+    class MemcachedValLengthError(Exception):
+        pass
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
@@ -798,7 +800,8 @@ class Client(local):
 
         #  silently do not store if value length exceeds maximum
         if self.server_max_value_length != 0 and \
-           len(val) > self.server_max_value_length: return(0)
+           len(val) > self.server_max_value_length: 
+           raise Client.MemcachedValLengthError("Value length (%d) exceeds maximum (%d)" % (len(val), self.server_max_value_length))
 
         return (flags, len(val), val)
 
@@ -1385,12 +1388,18 @@ if __name__ == "__main__":
 
         print "Testing using a value larger than the memcached value limit..."
         print 'NOTE: "MemCached: while expecting[...]" is normal...'
-        x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH)
+        try:
+            x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH)
+        except Client.MemcachedValLengthError:
+            print "Fail"
         if mc.get('keyhere') == None:
             print "OK",
         else:
             print "FAIL",; failures = failures + 1
-        x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH + 'aaa')
+        try:
+            x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH + 'aaa')
+        except Client.MemcachedValLengthError:
+            print "Ok"   
         if mc.get('keyhere') == None:
             print "OK"
         else:
