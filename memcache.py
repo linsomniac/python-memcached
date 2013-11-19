@@ -48,6 +48,7 @@ import socket
 import time
 import os
 import re
+import random
 try:
     import cPickle as pickle
 except ImportError:
@@ -347,17 +348,20 @@ class Client(local):
                 self.buckets.append(server)
 
     def _get_server(self, key):
-        if isinstance(key, tuple):
-            serverhash, key = key
-        else:
-            serverhash = serverHashFunction(key)
+        choices = range(len(self.buckets))
+        random.shuffle(choices)
 
-        for i in range(Client._SERVER_RETRIES):
-            server = self.buckets[serverhash % len(self.buckets)]
+        if isinstance(key, tuple):
+            choice, key = key
+        else:
+            choice = choices.pop()
+
+        for _ in range(Client._SERVER_RETRIES):
+            server = self.buckets[choice]
             if server.connect():
                 #print "(using server %s)" % server,
                 return server, key
-            serverhash = serverHashFunction(str(serverhash) + str(i))
+            choice = choices.pop()
         return None, None
 
     def disconnect_all(self):
