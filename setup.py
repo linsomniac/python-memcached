@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-from setuptools import setup
-import memcache
+from setuptools import setup  # noqa
+
+import memcache  # noqa
+
 
 setup(name="python-memcached",
       version=memcache.__version__,
@@ -14,13 +16,13 @@ setup(name="python-memcached",
       url="http://www.tummy.com/Community/software/python-memcached/",
       download_url="ftp://ftp.tummy.com/pub/python-memcached/",
       py_modules=["memcache"],
+      requirements=open('requirements.txt').read().split(),
       classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: Python Software Foundation License",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python",
-        "Topic :: Internet",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        ])
-
+          "Development Status :: 5 - Production/Stable",
+          "Intended Audience :: Developers",
+          "License :: OSI Approved :: Python Software Foundation License",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python",
+          "Topic :: Internet",
+          "Topic :: Software Development :: Libraries :: Python Modules",
+      ])
