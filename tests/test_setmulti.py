@@ -24,16 +24,16 @@ class test_Memcached_Set_Multi(unittest.TestCase):
         class FakeSocket(object):
             def __init__(self, *args):
                 if DEBUG:
-                    print 'FakeSocket{0!r}'.format(args)
+                    print('FakeSocket{0!r}'.format(args))
                 self._recv_chunks = list(RECV_CHUNKS)
 
             def connect(self, *args):
                 if DEBUG:
-                    print 'FakeSocket.connect{0!r}'.format(args)
+                    print('FakeSocket.connect{0!r}'.format(args))
 
             def sendall(self, *args):
                 if DEBUG:
-                    print 'FakeSocket.sendall{0!r}'.format(args)
+                    print('FakeSocket.sendall{0!r}'.format(args))
 
             def recv(self, *args):
                 if self._recv_chunks:
@@ -41,12 +41,12 @@ class test_Memcached_Set_Multi(unittest.TestCase):
                 else:
                     data = ''
                 if DEBUG:
-                    print 'FakeSocket.recv{0!r} -> {1!r}'.format(args, data)
+                    print('FakeSocket.recv{0!r} -> {1!r}'.format(args, data))
                 return data
 
             def close(self):
                 if DEBUG:
-                    print 'FakeSocket.close()'
+                    print('FakeSocket.close()')
 
         self.old_socket = socket.socket
         socket.socket = FakeSocket
@@ -62,4 +62,4 @@ class test_Memcached_Set_Multi(unittest.TestCase):
         self.assertEqual(sorted(bad_keys), ['bar', 'foo'])
 
         if DEBUG:
-            print 'set_multi({0!r}) -> {1!r}'.format(mapping, bad_keys)
+            print('set_multi({0!r}) -> {1!r}'.format(mapping, bad_keys))
