@@ -364,7 +364,7 @@ class Client(local):
         for s in self.servers:
             s.close_socket()
 
-    def delete_multi(self, keys, time=0, key_prefix=''):
+    def delete_multi(self, keys, time=None, key_prefix=''):
         '''
         Delete multiple keys in the memcache doing just one query.
 
@@ -402,7 +402,7 @@ class Client(local):
         for server in server_keys.iterkeys():
             bigcmd = []
             write = bigcmd.append
-            if time != None:
+            if time is not None:
                  for key in server_keys[server]: # These are mangled keys
                      write("delete %s %d\r\n" % (key, time))
             else:
@@ -430,7 +430,7 @@ class Client(local):
                 rc = 0
         return rc
 
-    def delete(self, key, time=0):
+    def delete(self, key, time=None):
         '''Deletes a key from the memcache.
 
         @return: Nonzero on success.
@@ -444,7 +444,7 @@ class Client(local):
         if not server:
             return 0
         self._statlog('delete')
-        if time != None and time != 0:
+        if time is not None and time != 0:
             cmd = "delete %s %d" % (key, time)
         else:
             cmd = "delete %s" % key
