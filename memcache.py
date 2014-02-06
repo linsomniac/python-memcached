@@ -352,6 +352,9 @@ class Client(local):
         else:
             serverhash = serverHashFunction(key)
 
+        if not self.buckets:
+            return None, None
+
         for i in range(Client._SERVER_RETRIES):
             server = self.buckets[serverhash % len(self.buckets)]
             if server.connect():
