@@ -455,7 +455,7 @@ class Client(local):
         @rtype: int
         '''
         return self._deletetouch(['TOUCHED'], "touch", key, time)
-        
+
     def _deletetouch(self, expected, cmd, key, time=0):
         if self.do_check_key:
             self.check_key(key)
