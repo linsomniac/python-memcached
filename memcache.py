@@ -433,15 +433,30 @@ class Client(local):
                 rc = 0
         return rc
 
-    def delete(self, key, time=0):
+    def delete(self, key):
         '''Deletes a key from the memcache.
 
         @return: Nonzero on success.
-        @param time: number of seconds any subsequent set / update commands
-        should fail. Defaults to None for no delay.
         @rtype: int
         '''
-        return self._deletetouch(['DELETED','NOT_FOUND'], "delete", key, time)
+        if self.do_check_key:
+            self.check_key(key)
+        server, key = self._get_server(key)
+        if not server:
+            return 0
+        self._statlog('delete')
+        cmd = "delete %s" % key
+
+        try:
+            server.send_cmd(cmd)
+            line = server.readline()
+            if line and line.strip() in ['DELETED', 'NOT_FOUND']: return 1
+            self.debuglog('Delete expected DELETED or NOT_FOUND, got: %s'
+                    % repr(line))
+        except socket.error, msg:
+            if isinstance(msg, tuple): msg = msg[1]
+            server.mark_dead(msg)
+        return 0
 
     def touch(self, key, time=0):
         '''Updates the expiration time of a key in memcache.
@@ -454,26 +469,20 @@ class Client(local):
             default to 0 == cache forever.
         @rtype: int
         '''
-        return self._deletetouch(['TOUCHED'], "touch", key, time)
-
-    def _deletetouch(self, expected, cmd, key, time=0):
         if self.do_check_key:
             self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
-        self._statlog(cmd)
-        if time != None and time != 0:
-            cmd = "%s %s %d" % (cmd, key, time)
-        else:
-            cmd = "%s %s" % (cmd, key)
+        self._statlog('touch')
+        cmd = "touch %s %d" % (key, time)
 
         try:
             server.send_cmd(cmd)
             line = server.readline()
-            if line and line.strip() in expected: return 1
-            self.debuglog('%s expected %s, got: %s'
-                    % (cmd, ' or '.join(expected), repr(line)))
+            if line and line.strip() in ['TOUCHED']: return 1
+            self.debuglog('Touch expected TOUCHED, got: %s'
+                    % (repr(line)))
         except socket.error, msg:
             if isinstance(msg, tuple): msg = msg[1]
             server.mark_dead(msg)
