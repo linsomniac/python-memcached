@@ -61,7 +61,7 @@ import six
 
 
 def cmemcache_hash(key):
-    return ((((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1)
+    return ((((binascii.crc32(key.encode('ascii')) & 0xffffffff) >> 16) & 0x7fff) or 1)
 serverHashFunction = cmemcache_hash
 
 
@@ -781,7 +781,7 @@ class Client(threading.local):
         if not server_keys:
             return(mapping.keys())
 
-        for server, keys in server_keys.iteritems():
+        for server, keys in six.iteritems(server_keys):
             try:
                 for key in keys:
                     if server.readline() == 'STORED':
@@ -1121,14 +1121,12 @@ class Client(threading.local):
             key = key[1]
         if not key:
             raise Client.MemcachedKeyNoneError("Key is None")
-        if isinstance(key, unicode):
-            raise Client.MemcachedStringEncodingError(
-                "Keys must be str()'s, not unicode.  Convert your unicode "
-                "strings using mystring.encode(charset)!")
-        if not isinstance(key, str):
+        if isinstance(key, six.text_type):
+            key = key.encode('ascii')
+        if not isinstance(key, six.binary_type):
             raise Client.MemcachedKeyTypeError("Key must be str()'s")
 
-        if isinstance(key, basestring):
+        if isinstance(key, six.string_types):
             if self.server_max_key_length != 0 and \
                     len(key) + key_extra_len > self.server_max_key_length:
                 raise Client.MemcachedKeyLengthError(
