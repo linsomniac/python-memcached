@@ -63,5 +63,3 @@ class test_Memcached_Set_Multi(unittest.TestCase):
 
         if DEBUG:
             print 'set_multi({0!r}) -> {1!r}'.format(mapping, bad_keys)
-
-unittest.main()
