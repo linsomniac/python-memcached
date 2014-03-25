@@ -2,11 +2,9 @@
 
 from setuptools import setup  # noqa
 
-import memcache  # noqa
-
 
 setup(name="python-memcached",
-      version=memcache.__version__,
+      version="1.53",
       description="Pure python memcached client",
       long_description=open("README.md").read(),
       author="Evan Martin",
