@@ -781,7 +781,7 @@ class Client(threading.local):
         if not server_keys:
             return(mapping.keys())
 
-        for server, keys in server_keys.iteritems():
+        for server, keys in six.iteritems(server_keys):
             try:
                 for key in keys:
                     if server.readline() == 'STORED':
