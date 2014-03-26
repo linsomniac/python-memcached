@@ -358,6 +358,9 @@ class Client(threading.local):
         else:
             serverhash = serverHashFunction(key)
 
+        if not self.buckets:
+            return None, None
+
         for i in range(Client._SERVER_RETRIES):
             server = self.buckets[serverhash % len(self.buckets)]
             if server.connect():
@@ -445,24 +448,40 @@ class Client(threading.local):
         should fail. Defaults to None for no delay.
         @rtype: int
         '''
+        return self._deletetouch(['DELETED', 'NOT_FOUND'], "delete", key, time)
+
+    def touch(self, key, time=0):
+        '''Updates the expiration time of a key in memcache.
+
+        @return: Nonzero on success.
+        @param time: Tells memcached the time which this value should
+            expire, either as a delta number of seconds, or an absolute
+            unix time-since-the-epoch value. See the memcached protocol
+            docs section "Storage Commands" for more info on <exptime>. We
+            default to 0 == cache forever.
+        @rtype: int
+        '''
+        return self._deletetouch(['TOUCHED'], "touch", key, time)
+
+    def _deletetouch(self, expected, cmd, key, time=0):
         if self.do_check_key:
             self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
-        self._statlog('delete')
+        self._statlog(cmd)
         if time is not None and time != 0:
-            cmd = "delete %s %d" % (key, time)
+            cmd = "%s %s %d" % (cmd, key, time)
         else:
-            cmd = "delete %s" % key
+            cmd = "%s %s" % (cmd, key)
 
         try:
             server.send_cmd(cmd)
             line = server.readline()
-            if line and line.strip() in ['DELETED', 'NOT_FOUND']:
+            if line and line.strip() in expected:
                 return 1
-            self.debuglog('Delete expected DELETED or NOT_FOUND, got: %s'
-                          % repr(line))
+            self.debuglog('%s expected %s, got: %r'
+                          % (cmd, ' or '.join(expected), line))
         except socket.error as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]

@@ -1,3 +1,7 @@
+   *  Added touch(), patch by erankor on github.
+
+   *  Allow empty server list, patch by zewt on github.
+
    *  If unknown flags in get request, raises a value error rather than the
       code bombing out.
 
