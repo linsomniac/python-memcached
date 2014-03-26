@@ -482,7 +482,7 @@ class Client(threading.local):
                 return 1
             self.debuglog('%s expected %s, got: %s'
                     % (cmd, ' or '.join(expected), repr(line)))
-        except socket.error, msg:
+        except socket.error as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
             server.mark_dead(msg)
