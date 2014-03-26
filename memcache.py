@@ -842,7 +842,6 @@ class Client(threading.local):
                 pickler = self.pickler(file, self.pickleProtocol)
             if self.persistent_id:
                 pickler.persistent_id = self.persistent_id
-            print(repr(val))
             pickler.dump(val)
             val = file.getvalue()
 
