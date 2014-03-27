@@ -14,7 +14,7 @@ setup(name="python-memcached",
       url="http://www.tummy.com/Community/software/python-memcached/",
       download_url="ftp://ftp.tummy.com/pub/python-memcached/",
       py_modules=["memcache"],
-      requirements=open('requirements.txt').read().split(),
+      install_requires=open('requirements.txt').read().split(),
       classifiers=[
           "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",

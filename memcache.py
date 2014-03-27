@@ -448,7 +448,7 @@ class Client(threading.local):
         should fail. Defaults to None for no delay.
         @rtype: int
         '''
-        return self._deletetouch(['DELETED','NOT_FOUND'], "delete", key, time)
+        return self._deletetouch(['DELETED', 'NOT_FOUND'], "delete", key, time)
 
     def touch(self, key, time=0):
         '''Updates the expiration time of a key in memcache.
@@ -480,9 +480,9 @@ class Client(threading.local):
             line = server.readline()
             if line and line.strip() in expected:
                 return 1
-            self.debuglog('%s expected %s, got: %s'
-                    % (cmd, ' or '.join(expected), repr(line)))
-        except socket.error, msg:
+            self.debuglog('%s expected %s, got: %r'
+                          % (cmd, ' or '.join(expected), line))
+        except socket.error as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
             server.mark_dead(msg)
