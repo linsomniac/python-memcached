@@ -147,9 +147,6 @@ class Client(threading.local):
     class MemcachedKeyTypeError(MemcachedKeyError):
         pass
 
-    class MemcachedStringEncodingError(Exception):
-        pass
-
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
                  pload=None, pid=None,
@@ -224,7 +221,7 @@ class Client(threading.local):
             self.server_max_value_length = SERVER_MAX_VALUE_LENGTH
 
         #  figure out the pickler style
-        file = io.StringIO()
+        file = six.StringIO()
         try:
             pickler = self.pickler(file, protocol=self.pickleProtocol)
             self.picklerIsKeyword = True
@@ -429,7 +426,7 @@ class Client(threading.local):
         for server in dead_servers:
             del server_keys[server]
 
-        for server, keys in server_keys.iteritems():
+        for server, keys in six.iteritems(server_keys):
             try:
                 for key in keys:
                     server.expect("DELETED")
@@ -482,7 +479,7 @@ class Client(threading.local):
                 return 1
             self.debuglog('%s expected %s, got: %s'
                     % (cmd, ' or '.join(expected), repr(line)))
-        except socket.error, msg:
+        except socket.error as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
             server.mark_dead(msg)
@@ -798,7 +795,7 @@ class Client(threading.local):
 
         #  short-circuit if there are no servers, just return all keys
         if not server_keys:
-            return(mapping.keys())
+            return list(mapping.keys())
 
         for server, keys in six.iteritems(server_keys):
             try:
@@ -828,14 +825,14 @@ class Client(threading.local):
             val = "%d" % val
             # force no attempt to compress this silly string.
             min_compress_len = 0
-        elif isinstance(val, long):
+        elif not six.PY3 and isinstance(val, long):
             flags |= Client._FLAG_LONG
             val = "%d" % val
             # force no attempt to compress this silly string.
             min_compress_len = 0
         else:
             flags |= Client._FLAG_PICKLE
-            file = io.StringIO()
+            file = six.StringIO()
             if self.picklerIsKeyword:
                 pickler = self.pickler(file, protocol=self.pickleProtocol)
             else:
@@ -1110,10 +1107,10 @@ class Client(threading.local):
         elif flags & Client._FLAG_INTEGER:
             val = int(buf)
         elif flags & Client._FLAG_LONG:
-            val = long(buf)
+            val = int(buf) if six.PY3 else long(buf)
         elif flags & Client._FLAG_PICKLE:
             try:
-                file = io.StringIO(buf)
+                file = six.StringIO(buf)
                 unpickler = self.unpickler(file)
                 if self.persistent_load:
                     unpickler.persistent_load = self.persistent_load
@@ -1131,8 +1128,6 @@ class Client(threading.local):
         """Checks sanity of key.  Fails if:
             Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
             Contains control characters  (Raises MemcachedKeyCharacterError).
-            Is not a string (Raises MemcachedStringEncodingError)
-            Is an unicode string (Raises MemcachedStringEncodingError)
             Is not a string (Raises MemcachedKeyError)
             Is None (Raises MemcachedKeyError)
         """
@@ -1256,10 +1251,14 @@ class _Host(object):
             self.socket = None
 
     def send_cmd(self, cmd):
+        if not isinstance(cmd, six.binary_type):
+            cmd = cmd.encode('utf-8')
         self.socket.sendall(cmd + '\r\n')
 
     def send_cmds(self, cmds):
         """cmds already has trailing \r\n's applied."""
+        if not isinstance(cmds, six.binary_type):
+            cmds = cmds.encode('utf-8')
         self.socket.sendall(cmds)
 
     def readline(self, raise_exception=False):
@@ -1340,7 +1339,7 @@ if __name__ == "__main__":
     print("Testing docstrings...")
     _doctest()
     print("Running tests:")
-    print
+    print()
     serverList = [["127.0.0.1:11211"]]
     if '--do-unix' in sys.argv:
         serverList.append([os.path.join(os.getcwd(), 'memcached.socket')])
@@ -1349,7 +1348,7 @@ if __name__ == "__main__":
         mc = Client(servers, debug=1)
 
         def to_s(val):
-            if not isinstance(val, basestring):
+            if not isinstance(val, six.string_types):
                 return "%s (%s)" % (val, type(val))
             return "%s" % val
 
@@ -1381,7 +1380,7 @@ if __name__ == "__main__":
 
         test_setget("a_string", "some random string")
         test_setget("an_integer", 42)
-        if test_setget("long", long(1 << 30)):
+        if test_setget("long", int(1 << 30) if six.PY3 else long(1 << 30)):
             print("Testing delete ...",)
             if mc.delete("long"):
                 print("OK")
@@ -1457,14 +1456,14 @@ if __name__ == "__main__":
 
         print("Testing sending a unicode-string key...",)
         try:
-            x = mc.set(unicode('keyhere'), 1)
-        except Client.MemcachedStringEncodingError as msg:
-            print("OK",)
-        else:
+            x = mc.set(six.text_type('keyhere'), 1)
+        except:
             failures = failures + 1
             print("FAIL")
+        else:
+            print("OK",)
         try:
-            x = mc.set((unicode('a') * SERVER_MAX_KEY_LENGTH)
+            x = mc.set((six.text_type('a') * SERVER_MAX_KEY_LENGTH)
                        .encode('utf-8'), 1)
         except Exception:
             failures = failures + 1
