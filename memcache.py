@@ -26,7 +26,7 @@ This should give you a feel for how this module operates::
     mc.incr("key")
     mc.decr("key")
 
-The standard way to use memcache with a database is like this::
+The standard way to use memcache with a database is like this:
 
     key = derive_key(obj)
     obj = mc.get(key)
@@ -116,6 +116,9 @@ class _Error(Exception):
 class _ConnectionDeadError(Exception):
     pass
 
+
+class NoServerAvailable(Exception):
+    pass
 
 try:
     # Only exists in Python 2.4+
@@ -376,7 +379,8 @@ class Client(local):
                 #print("(using server %s)" % server)
                 return server, key
             serverhash = serverHashFunction(str(serverhash) + str(i))
-        return None, None
+        
+        raise NoServerAvailable()
 
     def disconnect_all(self):
         for s in self.servers:
