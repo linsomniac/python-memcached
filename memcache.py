@@ -1168,7 +1168,7 @@ class _Host(object):
             return None
         except socket.error as msg:
             if isinstance(msg, tuple): msg = msg[1]
-            self.mark_dead("connect: %s" % msg[1])
+            self.mark_dead("connect: %s" % msg)
             return None
         self.socket = s
         self.buffer = ''
