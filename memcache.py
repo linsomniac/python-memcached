@@ -773,7 +773,7 @@ class Client(local):
         #  short-circuit if there are no servers, just return all keys
         if not server_keys: return(mapping.keys())
 
-        for server, keys in server_keys.iteritems():
+        for server, keys in server_keys.items():
             try:
                 for key in keys:
                     if server.readline() == 'STORED':
