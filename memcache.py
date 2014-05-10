@@ -412,7 +412,7 @@ class Client(local):
         dead_servers = []
 
         rc = 1
-        for server in server_keys.iterkeys():
+        for server in server_keys:
             bigcmd = []
             write = bigcmd.append
             if time != None:
@@ -741,13 +741,13 @@ class Client(local):
         self._statlog('set_multi')
 
         server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
-                mapping.iterkeys(), key_prefix)
+                mapping, key_prefix)
 
         # send out all requests on each server before reading anything
         dead_servers = []
         notstored = [] # original keys.
 
-        for server in server_keys.iterkeys():
+        for server in server_keys:
             bigcmd = []
             write = bigcmd.append
             try:
@@ -980,7 +980,7 @@ class Client(local):
 
         # send out all requests on each server before reading anything
         dead_servers = []
-        for server in server_keys.iterkeys():
+        for server in server_keys:
             try:
                 server.send_cmd("get %s" % " ".join(server_keys[server]))
             except socket.error as msg:
@@ -993,7 +993,7 @@ class Client(local):
             del server_keys[server]
 
         retvals = {}
-        for server in server_keys.iterkeys():
+        for server in server_keys:
             try:
                 line = server.readline()
                 while line and line != 'END':
