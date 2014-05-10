@@ -413,7 +413,7 @@ class Client(local):
                   write("delete %s\r\n" % key)
             try:
                 server.send_cmds(''.join(bigcmd))
-            except socket.error, msg:
+            except socket.error as msg:
                 rc = 0
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
@@ -427,7 +427,7 @@ class Client(local):
             try:
                 for key in keys:
                     server.expect("DELETED")
-            except socket.error, msg:
+            except socket.error as msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
                 rc = 0
@@ -474,7 +474,7 @@ class Client(local):
             if line and line.strip() in expected: return 1
             self.debuglog('%s expected %s, got: %s'
                     % (cmd, ' or '.join(expected), repr(line)))
-        except socket.error, msg:
+        except socket.error as msg:
             if isinstance(msg, tuple): msg = msg[1]
             server.mark_dead(msg)
         return 0
@@ -530,7 +530,7 @@ class Client(local):
             line = server.readline()
             if line == None or line.strip() =='NOT_FOUND': return None
             return int(line)
-        except socket.error, msg:
+        except socket.error as msg:
             if isinstance(msg, tuple): msg = msg[1]
             server.mark_dead(msg)
             return None
@@ -751,7 +751,7 @@ class Client(local):
                     else:
                         notstored.append(prefixed_to_orig_key[key])
                 server.send_cmds(''.join(bigcmd))
-            except socket.error, msg:
+            except socket.error as msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
                 dead_servers.append(server)
@@ -770,7 +770,7 @@ class Client(local):
                         continue
                     else:
                         notstored.append(prefixed_to_orig_key[key]) #un-mangle.
-            except (_Error, socket.error), msg:
+            except (_Error, socket.error) as msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
         return notstored
@@ -848,7 +848,7 @@ class Client(local):
                 server.send_cmd(fullcmd)
                 return(server.expect("STORED", raise_exception=True)
                         == "STORED")
-            except socket.error, msg:
+            except socket.error as msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
             return 0
@@ -860,7 +860,7 @@ class Client(local):
             try:
                 if server._get_socket():
                     return _unsafe_set()
-            except (_ConnectionDeadError, socket.error), msg:
+            except (_ConnectionDeadError, socket.error) as msg:
                 server.mark_dead(msg)
             return 0
 
@@ -893,7 +893,7 @@ class Client(local):
                     value = self._recv_value(server, flags, rlen)
                 finally:
                     server.expect("END", raise_exception=True)
-            except (_Error, socket.error), msg:
+            except (_Error, socket.error) as msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
                 return None
@@ -908,7 +908,7 @@ class Client(local):
                 if server.connect():
                     return _unsafe_get()
                 return None
-            except (_ConnectionDeadError, socket.error), msg:
+            except (_ConnectionDeadError, socket.error) as msg:
                 server.mark_dead(msg)
             return None
 
@@ -973,7 +973,7 @@ class Client(local):
         for server in server_keys.iterkeys():
             try:
                 server.send_cmd("get %s" % " ".join(server_keys[server]))
-            except socket.error, msg:
+            except socket.error as msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
                 dead_servers.append(server)
@@ -993,7 +993,7 @@ class Client(local):
                         val = self._recv_value(server, flags, rlen)
                         retvals[prefixed_to_orig_key[rkey]] = val   # un-prefix returned key.
                     line = server.readline()
-            except (_Error, socket.error), msg:
+            except (_Error, socket.error) as msg:
                 if isinstance(msg, tuple): msg = msg[1]
                 server.mark_dead(msg)
         return retvals
@@ -1047,7 +1047,7 @@ class Client(local):
                 if self.persistent_load:
                     unpickler.persistent_load = self.persistent_load
                 val = unpickler.load()
-            except Exception, e:
+            except Exception as e:
                 self.debuglog('Pickle error: %s\n' % e)
                 return None
         else:
@@ -1161,10 +1161,10 @@ class _Host(object):
         if hasattr(s, 'settimeout'): s.settimeout(self.socket_timeout)
         try:
             s.connect(self.address)
-        except socket.timeout, msg:
+        except socket.timeout as msg:
             self.mark_dead("connect: %s" % msg)
             return None
-        except socket.error, msg:
+        except socket.error as msg:
             if isinstance(msg, tuple): msg = msg[1]
             self.mark_dead("connect: %s" % msg[1])
             return None
@@ -1353,7 +1353,7 @@ if __name__ == "__main__":
         sys.stdout.flush()
         try:
             x = mc.set("this has spaces", 1)
-        except Client.MemcachedKeyCharacterError, msg:
+        except Client.MemcachedKeyCharacterError as msg:
             print "OK"
         else:
             print "FAIL"; failures = failures + 1
@@ -1361,7 +1361,7 @@ if __name__ == "__main__":
         print "Testing sending control characters...",
         try:
             x = mc.set("this\x10has\x11control characters\x02", 1)
-        except Client.MemcachedKeyCharacterError, msg:
+        except Client.MemcachedKeyCharacterError as msg:
             print "OK"
         else:
             print "FAIL"; failures = failures + 1
@@ -1369,13 +1369,13 @@ if __name__ == "__main__":
         print "Testing using insanely long key...",
         try:
             x = mc.set('a'*SERVER_MAX_KEY_LENGTH, 1)
-        except Client.MemcachedKeyLengthError, msg:
+        except Client.MemcachedKeyLengthError as msg:
             print "FAIL"; failures = failures + 1
         else:
             print "OK"
         try:
             x = mc.set('a'*SERVER_MAX_KEY_LENGTH + 'a', 1)
-        except Client.MemcachedKeyLengthError, msg:
+        except Client.MemcachedKeyLengthError as msg:
             print "OK"
         else:
             print "FAIL"; failures = failures + 1
@@ -1383,7 +1383,7 @@ if __name__ == "__main__":
         print "Testing sending a unicode-string key...",
         try:
             x = mc.set(unicode('keyhere'), 1)
-        except Client.MemcachedStringEncodingError, msg:
+        except Client.MemcachedStringEncodingError as msg:
             print "OK",
         else:
             print "FAIL",; failures = failures + 1
