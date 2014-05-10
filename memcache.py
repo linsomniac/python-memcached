@@ -57,7 +57,7 @@ except ImportError:
 
 from binascii import crc32   # zlib version is not cross-platform
 def cmemcache_hash(key):
-    return((((crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1)
+    return((((crc32(key.encode('ASCII')) & 0xffffffff) >> 16) & 0x7fff) or 1)
 serverHashFunction = cmemcache_hash
 
 def useOldServerHashFunction():
@@ -75,6 +75,17 @@ except ImportError:
         raise _Error("received compressed data but I don't support compression (import error)")
 
 from io import BytesIO
+try:
+    unicode
+except NameError:
+    _has_unicode = False
+else:
+    _has_unicode = True
+
+try:
+    _str_cls = basestring
+except NameError:
+    _str_cls = str
 
 valid_key_chars_re = re.compile('[\x21-\x7e\x80-\xff]+$')
 
@@ -357,7 +368,7 @@ class Client(local):
         for i in range(Client._SERVER_RETRIES):
             server = self.buckets[serverhash % len(self.buckets)]
             if server.connect():
-                #print "(using server %s)" % server,
+                #print("(using server %s)" % server,)
                 return server, key
             serverhash = serverHashFunction(str(serverhash) + str(i))
         return None, None
@@ -1067,14 +1078,17 @@ class Client(local):
         if isinstance(key, tuple): key = key[1]
         if not key:
             raise Client.MemcachedKeyNoneError("Key is None")
-        if isinstance(key, unicode):
+
+        # Make sure we're not a specific unicode type, if we're old enough that
+        # it's a separate type.
+        if _has_unicode is True and isinstance(key, unicode):
             raise Client.MemcachedStringEncodingError(
                     "Keys must be str()'s, not unicode.  Convert your unicode "
                     "strings using mystring.encode(charset)!")
         if not isinstance(key, str):
             raise Client.MemcachedKeyTypeError("Key must be str()'s")
 
-        if isinstance(key, basestring):
+        if isinstance(key, _str_cls):
             if self.server_max_key_length != 0 and \
                 len(key) + key_extra_len > self.server_max_key_length:
                 raise Client.MemcachedKeyLengthError("Key length is > %s"
@@ -1271,7 +1285,7 @@ if __name__ == "__main__":
         mc = Client(servers, debug=1)
 
         def to_s(val):
-            if not isinstance(val, basestring):
+            if not isinstance(val, _str_cls):
                 return "%s (%s)" % (val, type(val))
             return "%s" % val
         def test_setget(key, val):
