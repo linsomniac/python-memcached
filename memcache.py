@@ -74,10 +74,7 @@ except ImportError:
     def decompress(val):
         raise _Error("received compressed data but I don't support compression (import error)")
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import BytesIO
 
 valid_key_chars_re = re.compile('[\x21-\x7e\x80-\xff]+$')
 
@@ -225,7 +222,7 @@ class Client(local):
             self.server_max_value_length = SERVER_MAX_VALUE_LENGTH
 
         #  figure out the pickler style
-        file = StringIO()
+        file = BytesIO()
         try:
             pickler = self.pickler(file, protocol = self.pickleProtocol)
             self.picklerIsKeyword = True
@@ -796,7 +793,7 @@ class Client(local):
             min_compress_len = 0
         else:
             flags |= Client._FLAG_PICKLE
-            file = StringIO()
+            file = BytesIO()
             if self.picklerIsKeyword:
                 pickler = self.pickler(file, protocol = self.pickleProtocol)
             else:
@@ -1044,7 +1041,7 @@ class Client(local):
             val = long(buf)
         elif flags & Client._FLAG_PICKLE:
             try:
-                file = StringIO(buf)
+                file = BytesIO(buf)
                 unpickler = self.unpickler(file)
                 if self.persistent_load:
                     unpickler.persistent_load = self.persistent_load
