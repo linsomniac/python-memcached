@@ -26,7 +26,7 @@ This should give you a feel for how this module operates::
     mc.incr("key")
     mc.decr("key")
 
-The standard way to use memcache with a database is like this::
+The standard way to use memcache with a database is like this:
 
     key = derive_key(obj)
     obj = mc.get(key)
