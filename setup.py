@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-from setuptools import setup
-import memcache
+from setuptools import setup  # noqa
+
 
 setup(name="python-memcached",
-      version=memcache.__version__,
+      version="1.53",
       description="Pure python memcached client",
       long_description=open("README.md").read(),
       author="Evan Martin",
@@ -14,6 +14,7 @@ setup(name="python-memcached",
       url="http://www.tummy.com/Community/software/python-memcached/",
       download_url="ftp://ftp.tummy.com/pub/python-memcached/",
       py_modules=["memcache"],
+      install_requires=open('requirements.txt').read().split(),
       classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -31,4 +32,3 @@ setup(name="python-memcached",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4"
         ])
-

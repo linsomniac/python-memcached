@@ -6,6 +6,7 @@ python:
   - 3.3
   - 3.4
   - pypy
+  - 3.3
 install: python setup.py install
 before_script: pip install nose
 script: nosetests
