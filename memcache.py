@@ -1522,7 +1522,7 @@ if __name__ == "__main__":
             failures += 1
         try:
             x = mc.set((unicode('a')*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
-        except:
+        except Client.MemcachedKeyError:
             print("FAIL", end=" ")
             failures += 1
         else:
