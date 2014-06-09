@@ -1430,19 +1430,19 @@ if __name__ == "__main__":
         print(mc.get_multi(["a_string", "an_integer"]))
 
         #  removed from the protocol
-        #if test_setget("timed_delete", 'foo'):
-        #    print "Testing timed delete ...",
-        #    if mc.delete("timed_delete", 1):
-        #        print("OK")
-        #    else:
-        #        print("FAIL")
-        #        failures += 1
-        #    print "Checking results of timed delete ..."
-        #    if mc.get("timed_delete") == None:
-        #        print("OK")
-        #    else:
-        #        print("FAIL")
-        #        failures += 1
+        # if test_setget("timed_delete", 'foo'):
+        #     print "Testing timed delete ...",
+        #     if mc.delete("timed_delete", 1):
+        #         print("OK")
+        #     else:
+        #         print("FAIL")
+        #         failures += 1
+        #     print "Checking results of timed delete ..."
+        #     if mc.get("timed_delete") == None:
+        #         print("OK")
+        #     else:
+        #         print("FAIL")
+        #         failures += 1
 
         print("Testing get(unknown value) ...", end=" ")
         print(to_s(mc.get("unknown_value")))
