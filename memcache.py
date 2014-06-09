@@ -47,15 +47,16 @@ More detailed documentation is available in the L{Client} class.
 
 from __future__ import print_function
 
-import sys
-import socket
-import time
 import binascii
 import os
 import pickle
 import re
+import socket
+import sys
 import threading
+import time
 import zlib
+
 import six
 
 

@@ -9,12 +9,12 @@
 
 from __future__ import print_function
 
+import socket
+import sys
 import unittest
 
-import sys
 sys.path.append('..')
 import memcache
-import socket
 
 DEBUG = False
 
