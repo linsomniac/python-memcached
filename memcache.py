@@ -1527,7 +1527,6 @@ if __name__ == "__main__":
             failures += 1
         else:
             print("OK", end=" ")
-        import pickle
         s = pickle.loads('V\\u4f1a\np0\n.')
         try:
             x = mc.set((s * SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
