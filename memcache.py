@@ -1422,7 +1422,7 @@ if __name__ == "__main__":
 
         test_setget("a_string", "some random string")
         test_setget("an_integer", 42)
-        if test_setget("long", long(1<<30)):
+        if test_setget("long", long(1 << 30)):
             print("Testing delete ...", end=" ")
             if mc.delete("long"):
                 print("OK")
