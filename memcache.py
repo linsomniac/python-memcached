@@ -515,7 +515,9 @@ class Client(threading.local):
         return 0
 
     def incr(self, key, delta=1):
-        """Sends a command to the server to atomically increment the
+        """Increment value for C{key} by C{delta}
+
+        Sends a command to the server to atomically increment the
         value for C{key} by C{delta}, or by 1 if C{delta} is
         unspecified.  Returns None if C{key} doesn't exist on server,
         otherwise it returns the new value after incrementing.
@@ -543,7 +545,9 @@ class Client(threading.local):
         return self._incrdecr("incr", key, delta)
 
     def decr(self, key, delta=1):
-        """Like L{incr}, but decrements.  Unlike L{incr}, underflow is
+        """Decrement value for C{key} by C{delta}
+
+        Like L{incr}, but decrements.  Unlike L{incr}, underflow is
         checked and new values are capped at 0.  If server value is 1,
         a decrement of 2 returns 0, not -1.
 
@@ -652,7 +656,9 @@ class Client(threading.local):
         return self._set("set", key, val, time, min_compress_len)
 
     def cas(self, key, val, time=0, min_compress_len=0):
-        '''Sets a key to a given value in the memcache if it hasn't been
+        '''Check and set (CAS)
+
+        Sets a key to a given value in the memcache if it hasn't been
         altered since last fetched. (See L{gets}).
 
         The C{key} can optionally be an tuple, with the first element
@@ -1154,7 +1160,10 @@ class Client(threading.local):
         return val
 
     def check_key(self, key, key_extra_len=0):
-        """Checks sanity of key.  Fails if:
+        """Checks sanity of key.
+
+            Fails if:
+
             Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
             Contains control characters  (Raises MemcachedKeyCharacterError).
             Is not a string (Raises MemcachedStringEncodingError)
