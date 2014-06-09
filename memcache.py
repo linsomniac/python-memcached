@@ -884,8 +884,8 @@ class Client(threading.local):
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
-        if self.server_max_value_length != 0 and \
-           len(val) > self.server_max_value_length:
+        if (self.server_max_value_length != 0 and
+                len(val) > self.server_max_value_length):
             return(0)
 
         return (flags, len(val), val)
@@ -1171,14 +1171,14 @@ class Client(threading.local):
         # it's a separate type.
         if _has_unicode is True and isinstance(key, unicode):
             raise Client.MemcachedStringEncodingError(
-                    "Keys must be str()'s, not unicode.  Convert your unicode "
-                    "strings using mystring.encode(charset)!")
+                "Keys must be str()'s, not unicode.  Convert your unicode "
+                "strings using mystring.encode(charset)!")
         if not isinstance(key, str):
             raise Client.MemcachedKeyTypeError("Key must be str()'s")
 
         if isinstance(key, _str_cls):
-            if self.server_max_key_length != 0 and \
-                    len(key) + key_extra_len > self.server_max_key_length:
+            if (self.server_max_key_length != 0 and
+                    len(key) + key_extra_len > self.server_max_key_length):
                 raise Client.MemcachedKeyLengthError(
                     "Key length is > %s" % self.server_max_key_length
                 )
@@ -1386,7 +1386,8 @@ if __name__ == "__main__":
 
         def test_setget(key, val):
             global failures
-            print("Testing set/get {'%s': %s} ..." % (to_s(key), to_s(val)), end=" ")
+            print("Testing set/get {'%s': %s} ..."
+                  % (to_s(key), to_s(val)), end=" ")
             mc.set(key, val)
             newval = mc.get(key)
             if newval == val:
