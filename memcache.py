@@ -1421,7 +1421,7 @@ if __name__ == "__main__":
                 print("FAIL")
                 failures += 1
             print("Checking results of delete ...", end=" ")
-            if mc.get("long") == None:
+            if mc.get("long") is None:
                 print("OK")
             else:
                 print("FAIL")
@@ -1438,7 +1438,7 @@ if __name__ == "__main__":
         #         print("FAIL")
         #         failures += 1
         #     print "Checking results of timed delete ..."
-        #     if mc.get("timed_delete") == None:
+        #     if mc.get("timed_delete") is None:
         #         print("OK")
         #     else:
         #         print("FAIL")
@@ -1531,13 +1531,13 @@ if __name__ == "__main__":
         print("Testing using a value larger than the memcached value limit...")
         print('NOTE: "MemCached: while expecting[...]" is normal...')
         x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH)
-        if mc.get('keyhere') == None:
+        if mc.get('keyhere') is None:
             print("OK", end=" ")
         else:
             print("FAIL", end=" ")
             failures += 1
         x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH + 'aaa')
-        if mc.get('keyhere') == None:
+        if mc.get('keyhere') is None:
             print("OK")
         else:
             print("FAIL")
