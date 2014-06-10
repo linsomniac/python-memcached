@@ -47,15 +47,16 @@ More detailed documentation is available in the L{Client} class.
 
 from __future__ import print_function
 
-import sys
-import socket
-import time
 import binascii
 import os
 import pickle
 import re
+import socket
+import sys
 import threading
+import time
 import zlib
+
 import six
 
 
@@ -514,7 +515,9 @@ class Client(threading.local):
         return 0
 
     def incr(self, key, delta=1):
-        """Sends a command to the server to atomically increment the
+        """Increment value for C{key} by C{delta}
+
+        Sends a command to the server to atomically increment the
         value for C{key} by C{delta}, or by 1 if C{delta} is
         unspecified.  Returns None if C{key} doesn't exist on server,
         otherwise it returns the new value after incrementing.
@@ -542,7 +545,9 @@ class Client(threading.local):
         return self._incrdecr("incr", key, delta)
 
     def decr(self, key, delta=1):
-        """Like L{incr}, but decrements.  Unlike L{incr}, underflow is
+        """Decrement value for C{key} by C{delta}
+
+        Like L{incr}, but decrements.  Unlike L{incr}, underflow is
         checked and new values are capped at 0.  If server value is 1,
         a decrement of 2 returns 0, not -1.
 
@@ -651,7 +656,9 @@ class Client(threading.local):
         return self._set("set", key, val, time, min_compress_len)
 
     def cas(self, key, val, time=0, min_compress_len=0):
-        '''Sets a key to a given value in the memcache if it hasn't been
+        '''Check and set (CAS)
+
+        Sets a key to a given value in the memcache if it hasn't been
         altered since last fetched. (See L{gets}).
 
         The C{key} can optionally be an tuple, with the first element
@@ -883,8 +890,8 @@ class Client(threading.local):
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
-        if self.server_max_value_length != 0 and \
-           len(val) > self.server_max_value_length:
+        if (self.server_max_value_length != 0 and
+                len(val) > self.server_max_value_length):
             return(0)
 
         return (flags, len(val), val)
@@ -1153,7 +1160,10 @@ class Client(threading.local):
         return val
 
     def check_key(self, key, key_extra_len=0):
-        """Checks sanity of key.  Fails if:
+        """Checks sanity of key.
+
+            Fails if:
+
             Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
             Contains control characters  (Raises MemcachedKeyCharacterError).
             Is not a string (Raises MemcachedStringEncodingError)
@@ -1170,14 +1180,14 @@ class Client(threading.local):
         # it's a separate type.
         if _has_unicode is True and isinstance(key, unicode):
             raise Client.MemcachedStringEncodingError(
-                    "Keys must be str()'s, not unicode.  Convert your unicode "
-                    "strings using mystring.encode(charset)!")
+                "Keys must be str()'s, not unicode.  Convert your unicode "
+                "strings using mystring.encode(charset)!")
         if not isinstance(key, str):
             raise Client.MemcachedKeyTypeError("Key must be str()'s")
 
         if isinstance(key, _str_cls):
-            if self.server_max_key_length != 0 and \
-                    len(key) + key_extra_len > self.server_max_key_length:
+            if (self.server_max_key_length != 0 and
+                    len(key) + key_extra_len > self.server_max_key_length):
                 raise Client.MemcachedKeyLengthError(
                     "Key length is > %s" % self.server_max_key_length
                 )
@@ -1385,7 +1395,8 @@ if __name__ == "__main__":
 
         def test_setget(key, val):
             global failures
-            print("Testing set/get {'%s': %s} ..." % (to_s(key), to_s(val)), end=" ")
+            print("Testing set/get {'%s': %s} ..."
+                  % (to_s(key), to_s(val)), end=" ")
             mc.set(key, val)
             newval = mc.get(key)
             if newval == val:
@@ -1411,7 +1422,7 @@ if __name__ == "__main__":
 
         test_setget("a_string", "some random string")
         test_setget("an_integer", 42)
-        if test_setget("long", long(1<<30)):
+        if test_setget("long", long(1 << 30)):
             print("Testing delete ...", end=" ")
             if mc.delete("long"):
                 print("OK")
@@ -1419,7 +1430,7 @@ if __name__ == "__main__":
                 print("FAIL")
                 failures += 1
             print("Checking results of delete ...", end=" ")
-            if mc.get("long") == None:
+            if mc.get("long") is None:
                 print("OK")
             else:
                 print("FAIL")
@@ -1428,19 +1439,19 @@ if __name__ == "__main__":
         print(mc.get_multi(["a_string", "an_integer"]))
 
         #  removed from the protocol
-        #if test_setget("timed_delete", 'foo'):
-        #    print "Testing timed delete ...",
-        #    if mc.delete("timed_delete", 1):
-        #        print("OK")
-        #    else:
-        #        print("FAIL")
-        #        failures += 1
-        #    print "Checking results of timed delete ..."
-        #    if mc.get("timed_delete") == None:
-        #        print("OK")
-        #    else:
-        #        print("FAIL")
-        #        failures += 1
+        # if test_setget("timed_delete", 'foo'):
+        #     print "Testing timed delete ...",
+        #     if mc.delete("timed_delete", 1):
+        #         print("OK")
+        #     else:
+        #         print("FAIL")
+        #         failures += 1
+        #     print "Checking results of timed delete ..."
+        #     if mc.get("timed_delete") is None:
+        #         print("OK")
+        #     else:
+        #         print("FAIL")
+        #         failures += 1
 
         print("Testing get(unknown value) ...", end=" ")
         print(to_s(mc.get("unknown_value")))
@@ -1511,12 +1522,11 @@ if __name__ == "__main__":
             failures += 1
         try:
             x = mc.set((unicode('a')*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
-        except:
+        except Client.MemcachedKeyError:
             print("FAIL", end=" ")
             failures += 1
         else:
             print("OK", end=" ")
-        import pickle
         s = pickle.loads('V\\u4f1a\np0\n.')
         try:
             x = mc.set((s * SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
@@ -1529,13 +1539,13 @@ if __name__ == "__main__":
         print("Testing using a value larger than the memcached value limit...")
         print('NOTE: "MemCached: while expecting[...]" is normal...')
         x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH)
-        if mc.get('keyhere') == None:
+        if mc.get('keyhere') is None:
             print("OK", end=" ")
         else:
             print("FAIL", end=" ")
             failures += 1
         x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH + 'aaa')
-        if mc.get('keyhere') == None:
+        if mc.get('keyhere') is None:
             print("OK")
         else:
             print("FAIL")
