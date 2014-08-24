@@ -72,18 +72,6 @@ def useOldServerHashFunction():
     global serverHashFunction
     serverHashFunction = binascii.crc32
 
-try:
-    from zlib import compress, decompress
-    _supports_compress = True
-except ImportError:
-    _supports_compress = False
-    # quickly define a decompress just in case we recv compressed data.
-
-    def decompress(val):
-        raise _Error(
-            "Received compressed data but I don't support "
-            "compression (import error)")
-
 from io import BytesIO
 try:
     unicode
@@ -178,6 +166,7 @@ class Client(threading.local):
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
+                 compressor=zlib.compress, decompressor=zlib.decompress,
                  pload=None, pid=None,
                  server_max_key_length=None, server_max_value_length=None,
                  dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT,
@@ -240,6 +229,8 @@ class Client(threading.local):
         self.pickleProtocol = pickleProtocol
         self.pickler = pickler
         self.unpickler = unpickler
+        self.compressor = compressor
+        self.decompressor = decompressor
         self.persistent_load = pload
         self.persistent_id = pid
         self.server_max_key_length = server_max_key_length
@@ -643,7 +634,7 @@ class Client(threading.local):
         default to 0 == cache forever.
 
         @param min_compress_len: The threshold length to kick in
-        auto-compression of the value using the zlib.compress()
+        auto-compression of the value using the compressor
         routine. If the value being cached is a string, then the
         length of the string is measured, else if the value is an
         object, then the length of the pickle result is measured. If
@@ -678,7 +669,7 @@ class Client(threading.local):
         default to 0 == cache forever.
 
         @param min_compress_len: The threshold length to kick in
-        auto-compression of the value using the zlib.compress()
+        auto-compression of the value using the compressor
         routine. If the value being cached is a string, then the
         length of the string is measured, else if the value is an
         object, then the length of the pickle result is measured. If
@@ -777,7 +768,7 @@ class Client(threading.local):
             prefix not applied.
 
         @param min_compress_len: The threshold length to kick in
-            auto-compression of the value using the zlib.compress()
+            auto-compression of the value using the compressor
             routine. If the value being cached is a string, then the
             length of the string is measured, else if the value is an
             object, then the length of the pickle result is
@@ -878,11 +869,10 @@ class Client(threading.local):
             val = file.getvalue()
 
         lv = len(val)
-        # We should try to compress if min_compress_len > 0 and we
-        # could import zlib and this string is longer than our min
-        # threshold.
+        # We should try to compress if min_compress_len > 0
+        # and this string is longer than our min threshold.
         if min_compress_len and lv > min_compress_len:
-            comp_val = zlib.compress(val)
+            comp_val = self.compressor(val)
             # Only retain the result if the compression result is smaller
             # than the original.
             if len(comp_val) < lv:
@@ -1134,7 +1124,7 @@ class Client(threading.local):
             buf = buf[:-2]  # strip \r\n
 
         if flags & Client._FLAG_COMPRESSED:
-            buf = zlib.decompress(buf)
+            buf = self.decompressor(buf)
 
         if flags == 0 or flags == Client._FLAG_COMPRESSED:
             # Either a bare string or a compressed string now decompressed...
