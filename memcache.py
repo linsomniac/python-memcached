@@ -954,9 +954,9 @@ class Client(threading.local):
                 if key not in self.cas_ids:
                     return self._set('set', key, val, time, min_compress_len,
                                      noreply)
-                fullcmd = "%s %s %d %d %d %d\r\n%s" % (
+                fullcmd = "%s %s %d %d %d %d%s\r\n%s" % (
                     cmd, key, store_info[0], time, store_info[1],
-                    self.cas_ids[key], store_info[2])
+                    self.cas_ids[key], extra, store_info[2])
             else:
                 fullcmd = "%s %s %d %d %d%s\r\n%s" % (
                     cmd, key, store_info[0],
