@@ -447,10 +447,10 @@ class Client(threading.local):
             write = bigcmd.append
             if time is not None:
                 for key in server_keys[server]:  # These are mangled keys
-                    write("delete %s %d\r\n" % (self.key_encoder(key), time))
+                    write("delete %s %d\r\n" % (key, time))
             else:
                 for key in server_keys[server]:  # These are mangled keys
-                    write("delete %s\r\n" % self.key_encoder(key))
+                    write("delete %s\r\n" % key)
             try:
                 server.send_cmds(''.join(bigcmd))
             except socket.error as msg:
@@ -827,7 +827,7 @@ class Client(threading.local):
                         min_compress_len)
                     if store_info:
                         msg = "set %s %d %d %d\r\n%s\r\n"
-                        write(msg % (self.key_encoder(key),
+                        write(msg % (key,
                                      store_info[0],
                                      time,
                                      store_info[1],
@@ -1089,8 +1089,7 @@ class Client(threading.local):
         dead_servers = []
         for server in six.iterkeys(server_keys):
             try:
-                keys = [self.key_encoder(k) for k in server_keys[server]]
-                server.send_cmd("get %s" % " ".join(keys))
+                server.send_cmd("get %s" % " ".join(server_keys[server]))
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
