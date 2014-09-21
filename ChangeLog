@@ -1,3 +1,11 @@
+Sun, 21 Sep 2014 13:41:30 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   *  1.54 release.
+
+   *  Numerous patches to attempt to get Python 3 working, but
+      tests are still failing under Python 3, so this code is not ready
+      yet.
+
    *  MemcachedKeyCharacterError better describes key problem.
       Suggested by Roy Smith
 
