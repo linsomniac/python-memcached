@@ -1,3 +1,6 @@
+   *  MemcachedKeyCharacterError better describes key problem.
+      Suggested by Roy Smith
+
    *  Added touch(), patch by erankor on github.
 
    *  Allow empty server list, patch by zewt on github.

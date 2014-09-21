@@ -1193,7 +1193,7 @@ class Client(threading.local):
                 )
             if not valid_key_chars_re.match(key):
                 raise Client.MemcachedKeyCharacterError(
-                    "Control characters not allowed")
+                    "Control/space characters not allowed (key=%r)" % key)
 
 
 class _Host(object):
