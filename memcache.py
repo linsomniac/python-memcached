@@ -715,10 +715,15 @@ class Client(threading.local):
                 # server. Returns the mangled key.
                 server, key = self._get_server(
                     (orig_key[0], key_prefix + str_orig_key))
+                orig_key = orig_key[1]
             else:
                 # set_multi supports int / long keys.
                 str_orig_key = str(orig_key)
                 server, key = self._get_server(key_prefix + str_orig_key)
+
+            #  alert when passed in key is None
+            if orig_key is None:
+                self.check_key(orig_key, key_extra_len=key_extra_len)
 
             # Now check to make sure key length is proper ...
             if self.do_check_key:
@@ -1173,8 +1178,14 @@ class Client(threading.local):
         """
         if isinstance(key, tuple):
             key = key[1]
-        if not key:
+        if key is None:
             raise Client.MemcachedKeyNoneError("Key is None")
+        if key is '':
+            if key_extra_len is 0:
+                raise Client.MemcachedKeyNoneError("Key is empty")
+
+            #  key is empty but there is some other component to key
+            return
 
         # Make sure we're not a specific unicode type, if we're old enough that
         # it's a separate type.
