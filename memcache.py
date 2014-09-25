@@ -384,14 +384,12 @@ class Client(threading.local):
         else:
             serverhash = serverHashFunction(key)
 
-        indices = reduce(lambda a, (i, server): a + (i,) * server.weight,
-                         enumerate(self.servers), tuple())
-        while indices:
-            serverindex = indices[serverhash % len(indices)]
-            server = self.servers[serverindex]
+        buckets = tuple(self.buckets)
+        while buckets:
+            server = buckets[serverhash % len(buckets)]
             if server.connect():
                 return server, key
-            indices = filter(lambda x: x != serverindex, indices)
+            buckets = filter(lambda x: x != server, buckets)
         return None, None
 
     def disconnect_all(self):
