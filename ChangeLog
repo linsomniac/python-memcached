@@ -1,3 +1,5 @@
+   *  Adding support for "noreply".  Patch by cactus on github.
+
    *  Allowing empty key in _multi() calls.  Suggested by sergio97 on github.
 
 Sun, 21 Sep 2014 13:41:30 -0600  Sean Reifschneider  <jafo@tummy.com>
