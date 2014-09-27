@@ -1,3 +1,5 @@
+   *  Adding support for pluggable compressors.  Patch by cactus on github.
+
    *  Adding support for "noreply".  Patch by cactus on github.
 
    *  Allowing empty key in _multi() calls.  Suggested by sergio97 on github.
