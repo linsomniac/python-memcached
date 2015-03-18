@@ -96,9 +96,10 @@ __copyright__ = "Copyright (C) 2003 Danga Interactive"
 __license__ = "Python Software Foundation License"
 
 SERVER_MAX_KEY_LENGTH = 250
-# Storing values larger than 1MB requires recompiling memcached.  If
-# you do, this value can be changed by doing
-# "memcache.SERVER_MAX_VALUE_LENGTH = N" after importing this module.
+# Storing values larger than 1MB requires starting memcached with -I <size> for
+# memcached >= 1.4.2 or recompiling for < 1.4.2. If you do, this value can be
+# changed by doing "memcache.SERVER_MAX_VALUE_LENGTH = N" after importing this
+# module.
 SERVER_MAX_VALUE_LENGTH = 1024 * 1024
 
 
