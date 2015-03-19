@@ -6,7 +6,13 @@ python:
   - 3.3
   - 3.4
   - pypy
-  - 3.3
+matrix:
+  allow_failures:
+    - python: 3.2
+    - python: 3.3
+    - python: 3.4
+services:
+  - memcached
 install: python setup.py install
 before_script: pip install nose
 script: nosetests
