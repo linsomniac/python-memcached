@@ -1,3 +1,6 @@
+   *  Tests moved out into their own unittest testcases.
+      Patch by Jeremy Thurgood.
+
    *  Adding support for pluggable compressors.  Patch by cactus on github.
 
    *  Adding support for "noreply".  Patch by cactus on github.
