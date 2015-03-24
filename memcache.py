@@ -1412,6 +1412,200 @@ class _Host(object):
             return "unix:%s%s" % (self.address, d)
 
 
+class KetamaClient(Client):
+    """ Memcach client with Consistent hashing support.
+
+    We are using the ketama algorithm to implement the consistent hashing.
+
+    The ideal use case for this client is when your caching servers are
+    going to gets added or removed on time and you don't want to hot load
+    most of the hash keys at each time. If you are using consistent hashing
+    based client when ever there is change in the number of caching servers,
+    only very few percentage of cache miss happens across all servers.
+    By adjusting the SERVER_WEIGHT for your environment you can get least miss
+    rate.
+
+    How Ketama Works:
+        Ketama algorithm uses very simple algorithm to achieve the consistent
+        hashing. What it does is  that,
+
+        1. Preset the total number of Keys that we are going to save on the
+           hash server. eg; Total of 2 ** 16 or so.
+        2. Logically we put all this hash keys on a ring in ascending order.
+        3. For each server we give ring slots ( Hash key, or a position on the
+           ring.) Also we place same server in multiple places of the ring
+           to get better key distribution on a server.
+        4. When we want to place a value on the hash server, we give a slot
+           for that vale on the ring, and then we find a next closest server
+           on the ring by searching clock-wise. And then we pick that server
+           to actually save key:value pair.
+        5. Reading time, the same process happens. We find the ring slot for
+           the given key, and find the next server on the ring by searching
+           clock-wise. We know that we placed the value for that key on that
+           server.
+        6. So when we add or remove one server, some server slots getting
+           removed from the ring or some new one gets added. After this update
+           there is chances that some keys will miss, since we stop searching
+           for another server on the ring once we get the first server by doing
+           the clock-wise lookup. But the miss rate will be #Keys / RING_SIZE.
+           In case of non-consistent hashing method, since the hash function
+           depends on the number of servers, the majority of the keys misses if
+           we add or remove server.
+
+    TODO: Improve the documentation, add test cases.
+    """
+    # For this Consistent hashing client, the weight of the server means number
+    # of times the same server is placed on the different slots of the ketama
+    # hash key ring. This will make sure the each server have well normalized
+    # key distribution.
+    DEFAULT_SERVER_WEIGHT = 200
+
+    # Total number of slots on the ring.
+    # If addition or deletion of a new server only causes 1 to 5 percentage
+    # cache miss on the current configuration. ie; K / RING_SIZE 
+    # where K means total  keys stored on the ring.
+    RING_SIZE = 2 ** 16
+
+    def __init__(self, *args, **kwargs):
+        # Mapping between ring slot -> server.
+        self._ketama_server_ring = {}
+
+        # Sorted server slots on top of the virtual ring.
+        self._ketama_server_slots = []
+
+        super(KetamaClient, self).__init__(*args, **kwargs)
+
+    def add_server(self, server):
+        """
+        Add new server to the client.
+
+        @param servers: server host in <IP>:<PORT> format.
+                        or in tuple of (<IP>:<PORT>, weight)
+        """
+        server_obj = memcache._Host(
+            server if isinstance(server, tuple) else (
+                server, self.DEFAULT_SERVER_WEIGHT),
+            self.debug, dead_retry=self.dead_retry,
+            socket_timeout=self.socket_timeout,
+            flush_on_reconnect=self.flush_on_reconnect)
+
+        self._place_server_on_ring(server_obj)
+
+    def _get_server(self, key):
+        """
+        Get the memcache server corresponding to the given key.
+
+        Here we find the first server on the ring by searching clock-wise
+        from the given ring slot corresponding to the key.
+
+        @param key: The input query.
+
+        @return A tuple with (server_obj, key).
+        """
+        # map the key on to the ring slot space.
+        h_key = self._generate_ring_slot(key)
+
+        for slot in self._ketama_server_slots:
+            if h_key <= slot:
+                server = self._ketama_server_ring[slot]
+                if server.connect():
+                    return (server, key)
+
+        # Even after allocating the server, if the h_key won't fit
+        # on any server, then pick the first server on the ring.
+        server = (self._ketama_server_ring[self._ketama_server_slots[0]]
+                  if self._ketama_server_slots else None)
+
+        server and server.connect()
+        return server, key
+
+    def set_servers(self, servers):
+        """
+        Add a pool of servers into the client.
+
+        @param servers: List of server hosts in <IP>:<PORT> format.
+                        or
+                        List of tuples with each tuple of the format
+                        (<IP>:<PORT>, weight)
+        """
+        # Set the default weight if weight isn't passed.
+        self.servers = [memcache._Host(
+            s if isinstance(s, tuple) else (s, self.DEFAULT_SERVER_WEIGHT),
+            self.debug, dead_retry=self.dead_retry,
+            socket_timeout=self.socket_timeout,
+            flush_on_reconnect=self.flush_on_reconnect) for s in servers]
+
+        # Place all the servers on rings based on the slot allocation
+        # specifications.
+        map(self._place_server_on_ring, self.servers)
+
+    def _place_server_on_ring(self, server):
+        """
+        Place given server on the ring.
+
+        Based on the weight of the server, we generate multiple slots for
+        one key. This will give better key distribution.
+
+        @param server: An instance of :class:~`memcache._Host`.
+        """
+        server_slots = self._get_server_slots_on_ring(server)
+        for slot in server_slots:
+            if slot not in self._ketama_server_ring:
+                self._ketama_server_ring[slot] = server
+                self._ketama_server_slots.append(slot)
+            else:
+                # There is a key collection(<<<1% chance).
+                # Discarding this scenario now.
+                # TODO: Handle it.
+                pass
+
+        # Sort the server slot keys to make it a ring.
+        self._ketama_server_slots.sort()
+
+    def _get_server_slots_on_ring(self, server):
+        """
+        Returns list of slot on the ring for given server.
+
+        This make sure that the slots won't collide with others server.
+
+        @param: server An object of :class:~`memcache._Host`.
+        @return: list of slots on the ring.
+        """
+        server_slots = []
+
+        for i in range(0, server.weight):
+            # TODO: Keep a UUID id for each servers to avoid key collision.
+            server_key = "{}_{}".format("{}:{}".format(server.ip,
+                                                       server.port), i)
+
+            server_slots.append(self._generate_ring_slot(server_key))
+
+        return server_slots
+
+    def _generate_ring_slot(self, key):
+        """
+        Hash function which give random slots on the ring. Hash functon make
+        sure that the key distribution is even as much as possible.
+
+        @param key: Key which need to be mapped to the hash space.
+        @type key: str
+
+        @return: hash key corresponding to the `key`
+        """
+        #TODO: Make it more general.
+
+        # Simple hash method using python's internal hash algorithm.
+        #h_key = hash(key) & 0xffff
+
+        # crc32 based hashing
+        #h_key = ((crc32(key) & 0xffffffff) >> 16) & 0xffff
+
+        # For better randomness
+        h_key = ((crc32(key) & 0xffffffff)) & 0xffff
+
+        return h_key
+
+
 def _doctest():
     import doctest
     import memcache
