@@ -431,12 +431,9 @@ class Client(threading.local):
             bigcmd = []
             write = bigcmd.append
             extra = ' noreply' if noreply else ''
-            if time is not None:
-                for key in server_keys[server]:  # These are mangled keys
-                    write("delete %s %d%s\r\n" % (key, time, extra))
-            else:
-                for key in server_keys[server]:  # These are mangled keys
-                    write("delete %s%s\r\n" % (key, extra))
+            for key in server_keys[server]:  # These are mangled keys
+                write("delete %s%s\r\n" % (key, extra))
+
             try:
                 server.send_cmds(''.join(bigcmd))
             except socket.error as msg:
@@ -501,10 +498,7 @@ class Client(threading.local):
             return 0
         self._statlog(cmd)
         extra = ' noreply' if noreply else ''
-        if time is not None and time != 0:
-            cmd = "%s %s %d%s" % (cmd, key, time, extra)
-        else:
-            cmd = "%s %s%s" % (cmd, key, extra)
+        cmd = "%s %s%s" % (cmd, key, extra)
 
         try:
             server.send_cmd(cmd)
