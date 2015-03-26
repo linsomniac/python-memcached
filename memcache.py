@@ -1415,56 +1415,31 @@ class _Host(object):
 class KetamaClient(Client):
     """ Memcach client with Consistent hashing support.
 
-    We are using the ketama algorithm to implement the consistent hashing.
-
-    The ideal use case for this client is when your caching servers are
-    going to gets added or removed on time and you don't want to hot load
-    most of the hash keys at each time. If you are using consistent hashing
-    based client when ever there is change in the number of caching servers,
-    only very few percentage of cache miss happens across all servers.
-    By adjusting the SERVER_WEIGHT for your environment you can get least miss
-    rate.
+    Ketama is an implementation of a consistent hashing algorithm, meaning you
+    can add or remove servers from the memcached pool without causing a
+    complete remap of all keys. It was designed by Richard Jones.
 
     How Ketama Works:
-        Ketama algorithm uses very simple algorithm to achieve the consistent
-        hashing. What it does is  that,
-
-        1. Preset the total number of Keys that we are going to save on the
-           hash server. eg; Total of 2 ** 16 or so.
-        2. Logically we put all this hash keys on a ring in ascending order.
-        3. For each server we give ring slots ( Hash key, or a position on the
-           ring.) Also we place same server in multiple places of the ring
-           to get better key distribution on a server.
-        4. When we want to place a value on the hash server, we give a slot
-           for that vale on the ring, and then we find a next closest server
-           on the ring by searching clock-wise. And then we pick that server
-           to actually save key:value pair.
-        5. Reading time, the same process happens. We find the ring slot for
-           the given key, and find the next server on the ring by searching
-           clock-wise. We know that we placed the value for that key on that
-           server.
-        6. So when we add or remove one server, some server slots getting
-           removed from the ring or some new one gets added. After this update
-           there is chances that some keys will miss, since we stop searching
-           for another server on the ring once we get the first server by doing
-           the clock-wise lookup. But the miss rate will be #Keys / RING_SIZE.
-           In case of non-consistent hashing method, since the hash function
-           depends on the number of servers, the majority of the keys misses if
-           we add or remove server.
+        1. Hash each server to several unsigned integer values.
+        2. Conceptually, these numbers are placed on a ring.
+        3. Each number links to the server it was hashed from, so servers
+           appear at several points on the ring.
+        4. To map a key->server, hash the key to an unsigned integer and find
+           the next biggest number on the ring. That's your server. If
+           the number is too big, roll over to the first server in the ring
+        When a server is added or removed, only some keys will be remapped to
+        different servers. With the original modula algorithm, all keys
+        would have been remapped.
 
     TODO: Improve the documentation, add test cases.
     """
-    # For this Consistent hashing client, the weight of the server means number
-    # of times the same server is placed on the different slots of the ketama
-    # hash key ring. This will make sure the each server have well normalized
-    # key distribution.
+    # For this Consistent hashing client, the weight of the server is the
+    # number of entries it will have in the ring. This will make sure
+    # each server has well normalized key distribution.
     DEFAULT_SERVER_WEIGHT = 200
 
     # Total number of slots on the ring.
-    # If addition or deletion of a new server only causes 1 to 5 percentage
-    # cache miss on the current configuration. ie; K / RING_SIZE 
-    # where K means total  keys stored on the ring.
-    RING_SIZE = 2 ** 16
+    RING_SIZE = 2**16
 
     def __init__(self, *args, **kwargs):
         # Mapping between ring slot -> server.
@@ -1475,35 +1450,21 @@ class KetamaClient(Client):
 
         super(KetamaClient, self).__init__(*args, **kwargs)
 
-    def add_server(self, server):
-        """
-        Add new server to the client.
-
-        @param servers: server host in <IP>:<PORT> format.
-                        or in tuple of (<IP>:<PORT>, weight)
-        """
-        server_obj = memcache._Host(
-            server if isinstance(server, tuple) else (
-                server, self.DEFAULT_SERVER_WEIGHT),
-            self.debug, dead_retry=self.dead_retry,
-            socket_timeout=self.socket_timeout,
-            flush_on_reconnect=self.flush_on_reconnect)
-
-        self._place_server_on_ring(server_obj)
-
     def _get_server(self, key):
         """
         Get the memcache server corresponding to the given key.
 
-        Here we find the first server on the ring by searching clock-wise
-        from the given ring slot corresponding to the key.
+        @param key: key, or (server_hash, key) tuple if you want to specify
+                    a hash to determine which server is selected
 
-        @param key: The input query.
-
-        @return A tuple with (server_obj, key).
+        @return A tuple with (server_obj, key), or (None, None) if no servers
+                were available.
         """
         # map the key on to the ring slot space.
         h_key = self._generate_ring_slot(key)
+
+        if isinstance(key, tuple):
+            serverhash, key = key
 
         for slot in self._ketama_server_slots:
             if h_key <= slot:
@@ -1511,17 +1472,16 @@ class KetamaClient(Client):
                 if server.connect():
                     return (server, key)
 
-        # Even after allocating the server, if the h_key won't fit
-        # on any server, then pick the first server on the ring.
-        server = (self._ketama_server_ring[self._ketama_server_slots[0]]
-                  if self._ketama_server_slots else None)
+        # Roll over to the first available server
+        for server in self._ketama_server_ring.values():
+            if server and server.connect():
+                return (server, key)
 
-        server and server.connect()
-        return server, key
+        return (None, None)
 
     def set_servers(self, servers):
         """
-        Add a pool of servers into the client.
+        Set servers for this client.
 
         @param servers: List of server hosts in <IP>:<PORT> format.
                         or
@@ -1529,7 +1489,7 @@ class KetamaClient(Client):
                         (<IP>:<PORT>, weight)
         """
         # Set the default weight if weight isn't passed.
-        self.servers = [memcache._Host(
+        self.servers = [_Host(
             s if isinstance(s, tuple) else (s, self.DEFAULT_SERVER_WEIGHT),
             self.debug, dead_retry=self.dead_retry,
             socket_timeout=self.socket_timeout,
@@ -1541,10 +1501,9 @@ class KetamaClient(Client):
 
     def _place_server_on_ring(self, server):
         """
-        Place given server on the ring.
-
-        Based on the weight of the server, we generate multiple slots for
-        one key. This will give better key distribution.
+        Based on the weight of the server, generate multiple slots for
+        each server. This ensures when a server is added/remove keys won't all
+        remap to the same new server
 
         @param server: An instance of :class:~`memcache._Host`.
         """
@@ -1554,9 +1513,7 @@ class KetamaClient(Client):
                 self._ketama_server_ring[slot] = server
                 self._ketama_server_slots.append(slot)
             else:
-                # There is a key collection(<<<1% chance).
-                # Discarding this scenario now.
-                # TODO: Handle it.
+                # TODO: Handle collisions
                 pass
 
         # Sort the server slot keys to make it a ring.
@@ -1584,27 +1541,19 @@ class KetamaClient(Client):
 
     def _generate_ring_slot(self, key):
         """
-        Hash function which give random slots on the ring. Hash functon make
-        sure that the key distribution is even as much as possible.
+        Returns a slot in the ring for the given key.
 
-        @param key: Key which need to be mapped to the hash space.
+        @param key: Key which needs to be mapped to the ring.
         @type key: str
 
-        @return: hash key corresponding to the `key`
+        @return: hash value corresponding to the `key`
         """
-        #TODO: Make it more general.
 
-        # Simple hash method using python's internal hash algorithm.
-        #h_key = hash(key) & 0xffff
-
-        # crc32 based hashing
-        #h_key = ((crc32(key) & 0xffffffff) >> 16) & 0xffff
-
-        # For better randomness
-        h_key = ((crc32(key) & 0xffffffff)) & 0xffff
-
-        return h_key
-
+        if isinstance(key, tuple):
+            serverhash, key = key
+        else:
+            serverhash = binascii.crc32(key.encode('ascii')) & 0xffffffff
+        return serverhash % self.RING_SIZE
 
 def _doctest():
     import doctest
