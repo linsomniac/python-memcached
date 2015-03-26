@@ -1531,10 +1531,7 @@ class KetamaClient(Client):
         server_slots = []
 
         for i in range(0, server.weight):
-            # TODO: Keep a UUID id for each servers to avoid key collision.
-            server_key = "{}_{}".format("{}:{}".format(server.ip,
-                                                       server.port), i)
-
+            server_key = "%s:%d_%d" % (server.ip, server.port, i)
             server_slots.append(self._generate_ring_slot(server_key))
 
         return server_slots
