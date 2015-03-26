@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from unittest import TestCase
 
-from memcache import Client, SERVER_MAX_KEY_LENGTH
+from memcache import Client, KetamaClient, SERVER_MAX_KEY_LENGTH
 
 try:
     _str_cls = basestring
@@ -31,10 +31,10 @@ class FooStruct(object):
 
 
 class TestMemcache(TestCase):
-    def setUp(self):
+    def setUp(self, client_class=Client):
         # TODO: unix socket server stuff
         servers = ["127.0.0.1:11211"]
-        self.mc = Client(servers, debug=1)
+        self.mc = client_class(servers, debug=1)
         pass
 
     def check_setget(self, key, val, noreply=False):
@@ -117,6 +117,12 @@ class TestMemcache(TestCase):
         # These should work.
         self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1)
         self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1, noreply=True)
+
+
+class TestMemcacheKetama(TestMemcache):
+    def setUp(self):
+        # Run all the tests again using the KetamaClient
+        super(TestMemcacheKetama, self).setUp(KetamaClient)
 
 
 if __name__ == "__main__":
