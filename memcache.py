@@ -59,6 +59,10 @@ import zlib
 
 import six
 
+# 2to3 workaround
+if sys.version > '3':
+    long = int
+
 
 def cmemcache_hash(key):
     return (
@@ -1341,10 +1345,12 @@ class _Host(object):
             self.socket = None
 
     def send_cmd(self, cmd):
-        self.socket.sendall(cmd + '\r\n')
+        cmd = '{}\r\n'.format(cmd).encode('ascii')
+        self.socket.sendall(cmd)
 
     def send_cmds(self, cmds):
         """cmds already has trailing \r\n's applied."""
+        cmds = cmds.encode('ascii')
         self.socket.sendall(cmds)
 
     def readline(self, raise_exception=False):
@@ -1372,6 +1378,8 @@ class _Host(object):
                 else:
                     return ''
 
+            if not isinstance(data, str):
+                data = data.decode('ascii')
             buf += data
         self.buffer = buf[index + 2:]
         return buf[:index]
