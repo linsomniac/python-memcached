@@ -59,6 +59,10 @@ import zlib
 
 import six
 
+# 2to3 workaround
+if sys.version > '3':
+    long = int
+
 
 def cmemcache_hash(key):
     return (
@@ -912,6 +916,8 @@ class Client(threading.local):
                 pickler.persistent_id = self.persistent_id
             pickler.dump(val)
             val = file.getvalue()
+            if not isinstance(val, str):
+                val = val.decode('ascii')
 
         lv = len(val)
         # We should try to compress if min_compress_len > 0
@@ -928,7 +934,6 @@ class Client(threading.local):
         if (self.server_max_value_length != 0 and
                 len(val) > self.server_max_value_length):
             return(0)
-
         return (flags, len(val), val)
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
@@ -1184,6 +1189,8 @@ class Client(threading.local):
             val = long(buf)
         elif flags & Client._FLAG_PICKLE:
             try:
+                if isinstance(buf, str):
+                    buf = buf.encode('ascii')
                 file = BytesIO(buf)
                 unpickler = self.unpickler(file)
                 if self.persistent_load:
@@ -1341,10 +1348,12 @@ class _Host(object):
             self.socket = None
 
     def send_cmd(self, cmd):
-        self.socket.sendall(cmd + '\r\n')
+        cmd = '{}\r\n'.format(cmd).encode('ascii')
+        self.socket.sendall(cmd)
 
     def send_cmds(self, cmds):
         """cmds already has trailing \r\n's applied."""
+        cmds = cmds.encode('ascii')
         self.socket.sendall(cmds)
 
     def readline(self, raise_exception=False):
@@ -1372,6 +1381,8 @@ class _Host(object):
                 else:
                     return ''
 
+            if not isinstance(data, str):
+                data = data.decode('ascii')
             buf += data
         self.buffer = buf[index + 2:]
         return buf[:index]
