@@ -1,6 +1,6 @@
 Sun, 26 Jul 2015 14:44:20 -0600  Sean Reifschneider  <jafo@tummy.com>
 
-   *  1.55 release.
+   *  1.56 release.
 
    *  More patches for python3 from Victor Stinner #67.  Thanks!
 
