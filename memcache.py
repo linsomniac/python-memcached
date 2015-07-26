@@ -62,7 +62,7 @@ import six
 
 def cmemcache_hash(key):
     return (
-        (((binascii.crc32(key.encode('ascii')) & 0xffffffff)
+        (((binascii.crc32(key) & 0xffffffff)
           >> 16) & 0x7fff) or 1)
 serverHashFunction = cmemcache_hash
 
@@ -73,19 +73,19 @@ def useOldServerHashFunction():
     serverHashFunction = binascii.crc32
 
 from io import BytesIO
-try:
-    unicode
-except NameError:
-    _has_unicode = False
+if six.PY2:
+    try:
+        unicode
+    except NameError:
+        _has_unicode = False
+    else:
+        _has_unicode = True
 else:
     _has_unicode = True
 
-try:
-    _str_cls = basestring
-except NameError:
-    _str_cls = str
+_str_cls = six.string_types
 
-valid_key_chars_re = re.compile('[\x21-\x7e\x80-\xff]+$')
+valid_key_chars_re = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
 
 #  Original author: Evan Martin of Danga Interactive
@@ -248,6 +248,32 @@ class Client(threading.local):
             self.picklerIsKeyword = True
         except TypeError:
             self.picklerIsKeyword = False
+
+    def _encode_key(self, key):
+        if isinstance(key, tuple):
+            if isinstance(key[1], six.text_type):
+                return (key[0], key[1].encode('utf8'))
+        elif isinstance(key, six.text_type):
+            return key.encode('utf8')
+        return key
+
+    def _encode_cmd(self, cmd, key, headers, noreply, *args):
+        cmd_bytes = cmd.encode() if six.PY3 else cmd
+        fullcmd = [cmd_bytes, b' ', key]
+
+        if headers:
+            if six.PY3:
+                headers = headers.encode()
+            fullcmd.append(b' ')
+            fullcmd.append(headers)
+
+        if noreply:
+            fullcmd.append(b' noreply')
+
+        if args:
+            fullcmd.append(b' ')
+            fullcmd.extend(args)
+        return b''.join(fullcmd)
 
     def reset_cas(self):
         """Reset the cas cache.
@@ -475,7 +501,7 @@ class Client(threading.local):
             reply.
         @rtype: int
         '''
-        return self._deletetouch(['DELETED', 'NOT_FOUND'], "delete", key,
+        return self._deletetouch([b'DELETED', b'NOT_FOUND'], "delete", key,
                                  time, noreply)
 
     def touch(self, key, time=0, noreply=False):
@@ -491,23 +517,23 @@ class Client(threading.local):
             reply.
         @rtype: int
         '''
-        return self._deletetouch(['TOUCHED'], "touch", key, time, noreply)
+        return self._deletetouch([b'TOUCHED'], "touch", key, time, noreply)
 
     def _deletetouch(self, expected, cmd, key, time=0, noreply=False):
+        key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
         self._statlog(cmd)
-        extra = ' noreply' if noreply else ''
         if time is not None and time != 0:
-            cmd = "%s %s %d%s" % (cmd, key, time, extra)
+            fullcmd = self._encode_cmd(cmd, key, str(time), noreply)
         else:
-            cmd = "%s %s%s" % (cmd, key, extra)
+            fullcmd = self._encode_cmd(cmd, key, None, noreply)
 
         try:
-            server.send_cmd(cmd)
+            server.send_cmd(fullcmd)
             if noreply:
                 return 1
             line = server.readline()
@@ -573,20 +599,20 @@ class Client(threading.local):
         return self._incrdecr("decr", key, delta, noreply)
 
     def _incrdecr(self, cmd, key, delta, noreply=False):
+        key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return None
         self._statlog(cmd)
-        extra = ' noreply' if noreply else ''
-        cmd = "%s %s %d%s" % (cmd, key, delta, extra)
+        fullcmd = self._encode_cmd(cmd, key, str(delta), noreply)
         try:
-            server.send_cmd(cmd)
+            server.send_cmd(fullcmd)
             if noreply:
                 return
             line = server.readline()
-            if line is None or line.strip() == 'NOT_FOUND':
+            if line is None or line.strip() == b'NOT_FOUND':
                 return None
             return int(line)
         except socket.error as msg:
@@ -715,6 +741,7 @@ class Client(threading.local):
         stuff onto that server, as well as the mapping of prefixed key
         -> original key.
         """
+        key_prefix = self._encode_key(key_prefix)
         # Check it just once ...
         key_extra_len = len(key_prefix)
         if key_prefix and self.do_check_key:
@@ -730,17 +757,31 @@ class Client(threading.local):
                 # Tuple of hashvalue, key ala _get_server(). Caller is
                 # essentially telling us what server to stuff this on.
                 # Ensure call to _get_server gets a Tuple as well.
-                str_orig_key = str(orig_key[1])
+                serverhash, key = orig_key
+
+                key = self._encode_key(key)
+                if not isinstance(key, six.binary_type):
+                    # set_multi supports int / long keys.
+                    key = str(key)
+                    if six.PY3:
+                        key = key.encode('utf8')
+                bytes_orig_key = key
 
                 # Gotta pre-mangle key before hashing to a
                 # server. Returns the mangled key.
                 server, key = self._get_server(
-                    (orig_key[0], key_prefix + str_orig_key))
+                    (serverhash, key_prefix + key))
+
                 orig_key = orig_key[1]
             else:
-                # set_multi supports int / long keys.
-                str_orig_key = str(orig_key)
-                server, key = self._get_server(key_prefix + str_orig_key)
+                key = self._encode_key(orig_key)
+                if not isinstance(key, six.binary_type):
+                    # set_multi supports int / long keys.
+                    key = str(key)
+                    if six.PY3:
+                        key = key.encode('utf8')
+                bytes_orig_key = key
+                server, key = self._get_server(key_prefix + key)
 
             #  alert when passed in key is None
             if orig_key is None:
@@ -748,7 +789,7 @@ class Client(threading.local):
 
             # Now check to make sure key length is proper ...
             if self.do_check_key:
-                self.check_key(str_orig_key, key_extra_len=key_extra_len)
+                self.check_key(bytes_orig_key, key_extra_len=key_extra_len)
 
             if not server:
                 continue
@@ -830,7 +871,6 @@ class Client(threading.local):
         dead_servers = []
         notstored = []  # original keys.
 
-        extra = ' noreply' if noreply else ''
         for server in six.iterkeys(server_keys):
             bigcmd = []
             write = bigcmd.append
@@ -840,16 +880,15 @@ class Client(threading.local):
                         mapping[prefixed_to_orig_key[key]],
                         min_compress_len)
                     if store_info:
-                        msg = "set %s %d %d %d%s\r\n%s\r\n"
-                        write(msg % (key,
-                                     store_info[0],
-                                     time,
-                                     store_info[1],
-                                     extra,
-                                     store_info[2]))
+                        flags, len_val, val = store_info
+                        headers = "%d %d %d" % (flags, time, len_val)
+                        fullcmd = self._encode_cmd('set', key, headers,
+                                                   noreply,
+                                                   b'\r\n', val, b'\r\n')
+                        write(fullcmd)
                     else:
                         notstored.append(prefixed_to_orig_key[key])
-                server.send_cmds(''.join(bigcmd))
+                server.send_cmds(b''.join(bigcmd))
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -889,16 +928,22 @@ class Client(threading.local):
         the new value itself.
         """
         flags = 0
-        if isinstance(val, str):
+        if isinstance(val, six.binary_type):
             pass
+        elif isinstance(val, six.text_type):
+            val = val.encode('utf-8')
         elif isinstance(val, int):
             flags |= Client._FLAG_INTEGER
-            val = "%d" % val
+            val = str(val)
+            if six.PY3:
+                val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
-        elif isinstance(val, long):
+        elif six.PY2 and isinstance(val, long):
             flags |= Client._FLAG_LONG
-            val = "%d" % val
+            val = str(val)
+            if six.PY3:
+                val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
         else:
@@ -932,6 +977,7 @@ class Client(threading.local):
         return (flags, len(val), val)
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
+        key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
         server, key = self._get_server(key)
@@ -941,30 +987,29 @@ class Client(threading.local):
         def _unsafe_set():
             self._statlog(cmd)
 
+            if cmd == 'cas' and key not in self.cas_ids:
+                return self._set('set', key, val, time, min_compress_len,
+                                 noreply)
+
             store_info = self._val_to_store_info(val, min_compress_len)
             if not store_info:
                 return(0)
+            flags, len_val, encoded_val = store_info
 
-            extra = ' noreply' if noreply else ''
             if cmd == 'cas':
-                if key not in self.cas_ids:
-                    return self._set('set', key, val, time, min_compress_len,
-                                     noreply)
-                fullcmd = "%s %s %d %d %d %d%s\r\n%s" % (
-                    cmd, key, store_info[0], time, store_info[1],
-                    self.cas_ids[key], extra, store_info[2])
+                headers = ("%d %d %d %d"
+                           % (flags, time, len_val, self.cas_ids[key]))
             else:
-                fullcmd = "%s %s %d %d %d%s\r\n%s" % (
-                    cmd, key, store_info[0],
-                    time, store_info[1], extra, store_info[2]
-                )
+                headers = "%d %d %d" % (flags, time, len_val)
+            fullcmd = self._encode_cmd(cmd, key, headers, noreply,
+                                       b'\r\n', encoded_val)
 
             try:
                 server.send_cmd(fullcmd)
                 if noreply:
                     return True
-                return(server.expect("STORED", raise_exception=True)
-                       == "STORED")
+                return(server.expect(b"STORED", raise_exception=True)
+                       == b"STORED")
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -983,6 +1028,7 @@ class Client(threading.local):
             return 0
 
     def _get(self, cmd, key):
+        key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
         server, key = self._get_server(key)
@@ -993,7 +1039,9 @@ class Client(threading.local):
             self._statlog(cmd)
 
             try:
-                server.send_cmd("%s %s" % (cmd, key))
+                cmd_bytes = cmd.encode() if six.PY3 else cmd
+                fullcmd = b''.join((cmd_bytes, b' ', key))
+                server.send_cmd(fullcmd)
                 rkey = flags = rlen = cas_id = None
 
                 if cmd == 'gets':
@@ -1012,7 +1060,7 @@ class Client(threading.local):
                 try:
                     value = self._recv_value(server, flags, rlen)
                 finally:
-                    server.expect("END", raise_exception=True)
+                    server.expect(b"END", raise_exception=True)
             except (_Error, socket.error) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -1111,7 +1159,8 @@ class Client(threading.local):
         dead_servers = []
         for server in six.iterkeys(server_keys):
             try:
-                server.send_cmd("get %s" % " ".join(server_keys[server]))
+                fullcmd = b"get " + b" ".join(server_keys[server])
+                server.send_cmd(fullcmd)
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -1126,7 +1175,7 @@ class Client(threading.local):
         for server in six.iterkeys(server_keys):
             try:
                 line = server.readline()
-                while line and line != 'END':
+                while line and line != b'END':
                     rkey, flags, rlen = self._expectvalue(server, line)
                     #  Bo Yang reports that this can sometimes be None
                     if rkey is not None:
@@ -1144,7 +1193,7 @@ class Client(threading.local):
         if not line:
             line = server.readline(raise_exception)
 
-        if line and line[:5] == 'VALUE':
+        if line and line[:5] == b'VALUE':
             resp, rkey, flags, len, cas_id = line.split()
             return (rkey, int(flags), int(len), int(cas_id))
         else:
@@ -1154,7 +1203,7 @@ class Client(threading.local):
         if not line:
             line = server.readline(raise_exception)
 
-        if line and line[:5] == 'VALUE':
+        if line and line[:5] == b'VALUE':
             resp, rkey, flags, len = line.split()
             flags = int(flags)
             rlen = int(len)
@@ -1174,14 +1223,21 @@ class Client(threading.local):
 
         if flags & Client._FLAG_COMPRESSED:
             buf = self.decompressor(buf)
+            flags &= ~Client._FLAG_COMPRESSED
 
-        if flags == 0 or flags == Client._FLAG_COMPRESSED:
-            # Either a bare string or a compressed string now decompressed...
-            val = buf
+        if flags == 0:
+            # Bare string
+            if six.PY3:
+                val = buf.decode('utf8')
+            else:
+                val = buf
         elif flags & Client._FLAG_INTEGER:
             val = int(buf)
         elif flags & Client._FLAG_LONG:
-            val = long(buf)
+            if six.PY3:
+                val = int(buf)
+            else:
+                val = long(buf)
         elif flags & Client._FLAG_PICKLE:
             try:
                 file = BytesIO(buf)
@@ -1221,24 +1277,17 @@ class Client(threading.local):
             #  key is empty but there is some other component to key
             return
 
-        # Make sure we're not a specific unicode type, if we're old enough that
-        # it's a separate type.
-        if _has_unicode is True and isinstance(key, unicode):
-            raise Client.MemcachedStringEncodingError(
-                "Keys must be str()'s, not unicode.  Convert your unicode "
-                "strings using mystring.encode(charset)!")
-        if not isinstance(key, str):
-            raise Client.MemcachedKeyTypeError("Key must be str()'s")
+        if not isinstance(key, six.binary_type):
+            raise Client.MemcachedKeyTypeError("Key must be a binary string")
 
-        if isinstance(key, _str_cls):
-            if (self.server_max_key_length != 0 and
-                    len(key) + key_extra_len > self.server_max_key_length):
-                raise Client.MemcachedKeyLengthError(
-                    "Key length is > %s" % self.server_max_key_length
-                )
-            if not valid_key_chars_re.match(key):
-                raise Client.MemcachedKeyCharacterError(
-                    "Control/space characters not allowed (key=%r)" % key)
+        if (self.server_max_key_length != 0 and
+                len(key) + key_extra_len > self.server_max_key_length):
+            raise Client.MemcachedKeyLengthError(
+                "Key length is > %s" % self.server_max_key_length
+            )
+        if not valid_key_chars_re.match(key):
+            raise Client.MemcachedKeyCharacterError(
+                "Control/space characters not allowed (key=%r)" % key)
 
 
 class _Host(object):
@@ -1286,7 +1335,7 @@ class _Host(object):
         self.socket = None
         self.flush_on_next_connect = 0
 
-        self.buffer = ''
+        self.buffer = b''
 
     def debuglog(self, str):
         if self.debug:
@@ -1329,7 +1378,7 @@ class _Host(object):
             self.mark_dead("connect: %s" % msg)
             return None
         self.socket = s
-        self.buffer = ''
+        self.buffer = b''
         if self.flush_on_next_connect:
             self.flush()
             self.flush_on_next_connect = 0
@@ -1341,10 +1390,14 @@ class _Host(object):
             self.socket = None
 
     def send_cmd(self, cmd):
-        self.socket.sendall(cmd + '\r\n')
+        if isinstance(cmd, six.text_type):
+            cmd = cmd.encode('utf8')
+        self.socket.sendall(cmd + b'\r\n')
 
     def send_cmds(self, cmds):
         """cmds already has trailing \r\n's applied."""
+        if isinstance(cmds, six.text_type):
+            cmds = cmds.encode('utf8')
         self.socket.sendall(cmds)
 
     def readline(self, raise_exception=False):
@@ -1357,10 +1410,10 @@ class _Host(object):
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = lambda bufsize: ''
+            recv = lambda bufsize: b''
 
         while True:
-            index = buf.find('\r\n')
+            index = buf.find(b'\r\n')
             if index >= 0:
                 break
             data = recv(4096)
@@ -1378,8 +1431,11 @@ class _Host(object):
 
     def expect(self, text, raise_exception=False):
         line = self.readline(raise_exception)
-        if line != text:
-            self.debuglog("while expecting '%s', got unexpected response '%s'"
+        if self.debug and line != text:
+            if six.PY3:
+                text = text.decode('utf8')
+                line = line.decode('utf8', 'replace')
+            self.debuglog("while expecting %r, got unexpected response %r"
                           % (text, line))
         return line
 
@@ -1397,7 +1453,7 @@ class _Host(object):
 
     def flush(self):
         self.send_cmd('flush_all')
-        self.expect('OK')
+        self.expect(b'OK')
 
     def __str__(self):
         d = ''
@@ -1469,7 +1525,11 @@ if __name__ == "__main__":
         test_setget("a_string_2", "some random string", noreply=True)
         test_setget("an_integer", 42)
         test_setget("an_integer_2", 42, noreply=True)
-        if test_setget("long", long(1 << 30)):
+        if six.PY3:
+            ok = test_setget("long", 1 << 30)
+        else:
+            ok = test_setget("long", long(1 << 30))
+        if ok:
             print("Testing delete ...", end=" ")
             if mc.delete("long"):
                 print("OK")

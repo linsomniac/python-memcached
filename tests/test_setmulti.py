@@ -21,7 +21,7 @@ DEBUG = False
 
 class test_Memcached_Set_Multi(unittest.TestCase):
     def setUp(self):
-        RECV_CHUNKS = ['chunk1']
+        RECV_CHUNKS = [b'chunk1']
 
         class FakeSocket(object):
             def __init__(self, *args):

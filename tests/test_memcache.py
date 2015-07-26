@@ -2,6 +2,8 @@ from __future__ import print_function
 
 from unittest import TestCase
 
+import six
+
 from memcache import Client, SERVER_MAX_KEY_LENGTH
 
 try:
@@ -135,14 +137,14 @@ if __name__ == "__main__":
 
         print("Testing sending a unicode-string key...", end=" ")
         try:
-            x = mc.set(u'keyhere', 1)
+            x = mc.set(six.u('keyhere'), 1)
         except Client.MemcachedStringEncodingError as msg:
             print("OK", end=" ")
         else:
             print("FAIL", end=" ")
             failures += 1
         try:
-            x = mc.set((u'a'*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
+            x = mc.set((six.u('a')*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
         except Client.MemcachedKeyError:
             print("FAIL", end=" ")
             failures += 1
