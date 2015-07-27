@@ -1,10 +1,11 @@
 from __future__ import print_function
 
-from unittest import TestCase
+import time
+import unittest
 
 import six
 
-from memcache import Client, SERVER_MAX_KEY_LENGTH
+from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH
 
 try:
     _str_cls = basestring
@@ -32,12 +33,14 @@ class FooStruct(object):
         return 0
 
 
-class TestMemcache(TestCase):
+class TestMemcache(unittest.TestCase):
     def setUp(self):
         # TODO: unix socket server stuff
         servers = ["127.0.0.1:11211"]
         self.mc = Client(servers, debug=1)
-        pass
+
+    def tearDown(self):
+        self.mc.disconnect_all()
 
     def check_setget(self, key, val, noreply=False):
         self.mc.set(key, val, noreply=noreply)
@@ -64,6 +67,8 @@ class TestMemcache(TestCase):
             {"gm_an_integer": 42, "gm_a_string": "some random string"})
 
     def test_get_unknown_value(self):
+        self.mc.delete("unknown_value")
+
         self.assertEqual(self.mc.get("unknown_value"), None)
 
     def test_setget_foostruct(self):
@@ -120,79 +125,55 @@ class TestMemcache(TestCase):
         self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1)
         self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1, noreply=True)
 
+    def test_unicode_key(self):
+        s = six.u('\u4f1a')
+        maxlen = SERVER_MAX_KEY_LENGTH // len(s.encode('utf-8'))
+        key = s * maxlen
 
-if __name__ == "__main__":
-    # failures = 0
-    # print("Testing docstrings...")
-    # _doctest()
-    # print("Running tests:")
-    # print()
-    # serverList = [["127.0.0.1:11211"]]
-    # if '--do-unix' in sys.argv:
-    #     serverList.append([os.path.join(os.getcwd(), 'memcached.socket')])
+        self.mc.set(key, 5)
+        value = self.mc.get(key)
+        self.assertEqual(value, 5)
 
-    # for servers in serverList:
-    #     mc = Client(servers, debug=1)
-    if False:
+    def test_ignore_too_large_value(self):
+        # NOTE: "MemCached: while expecting[...]" is normal...
+        key = 'keyhere'
 
-        print("Testing sending a unicode-string key...", end=" ")
-        try:
-            x = mc.set(six.u('keyhere'), 1)
-        except Client.MemcachedStringEncodingError as msg:
-            print("OK", end=" ")
-        else:
-            print("FAIL", end=" ")
-            failures += 1
-        try:
-            x = mc.set((six.u('a')*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
-        except Client.MemcachedKeyError:
-            print("FAIL", end=" ")
-            failures += 1
-        else:
-            print("OK", end=" ")
-        s = pickle.loads('V\\u4f1a\np0\n.')
-        try:
-            x = mc.set((s * SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
-        except Client.MemcachedKeyLengthError:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
+        value = 'a' * (SERVER_MAX_VALUE_LENGTH // 2)
+        self.assertTrue(self.mc.set(key, value))
+        self.assertEqual(self.mc.get(key), value)
 
-        print("Testing using a value larger than the memcached value limit...")
-        print('NOTE: "MemCached: while expecting[...]" is normal...')
-        x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH)
-        if mc.get('keyhere') is None:
-            print("OK", end=" ")
-        else:
-            print("FAIL", end=" ")
-            failures += 1
-        x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH + 'aaa')
-        if mc.get('keyhere') is None:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
+        value = 'a' * SERVER_MAX_VALUE_LENGTH
+        self.assertFalse(self.mc.set(key, value))
+        # This test fails if the -I option is used on the memcached server
+        self.assertIsNone(self.mc.get(key))
 
-        print("Testing set_multi() with no memcacheds running", end=" ")
-        mc.disconnect_all()
-        errors = mc.set_multi({'keyhere': 'a', 'keythere': 'b'})
-        if errors != []:
-            print("FAIL")
-            failures += 1
-        else:
-            print("OK")
+    def test_get_set_multi_key_prefix(self):
+        """Testing set_multi() with no memcacheds running."""
 
-        print("Testing delete_multi() with no memcacheds running", end=" ")
-        mc.disconnect_all()
-        ret = mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
-        if ret != 1:
-            print("FAIL")
-            failures += 1
-        else:
-            print("OK")
+        prefix = 'pfx_'
+        values = {'key1': 'a', 'key2': 'b'}
+        errors = self.mc.set_multi(values, key_prefix=prefix)
+        self.assertEqual(errors, [])
 
-    if failures > 0:
-        print('*** THERE WERE FAILED TESTS')
-        sys.exit(1)
-    sys.exit(0)
+        keys = list(values)
+        self.assertEqual(self.mc.get_multi(keys, key_prefix=prefix),
+                         values)
+
+    def test_set_multi_dead_servers(self):
+        """Testing set_multi() with no memcacheds running."""
+
+        self.mc.disconnect_all()
+        for server in self.mc.servers:
+            server.mark_dead('test')
+        errors = self.mc.set_multi({'key1': 'a', 'key2': 'b'})
+        self.assertEqual(sorted(errors), ['key1', 'key2'])
+
+    def test_disconnect_all_delete_multi(self):
+        """Testing delete_multi() with no memcacheds running."""
+        self.mc.disconnect_all()
+        ret = self.mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
+        self.assertEqual(ret, 1)
+
+
+if __name__ == '__main__':
+    unittest.main()
