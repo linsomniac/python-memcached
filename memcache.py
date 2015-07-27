@@ -73,15 +73,6 @@ def useOldServerHashFunction():
     serverHashFunction = binascii.crc32
 
 from io import BytesIO
-if six.PY2:
-    try:
-        unicode
-    except NameError:
-        _has_unicode = False
-    else:
-        _has_unicode = True
-else:
-    _has_unicode = True
 
 _str_cls = six.string_types
 
@@ -460,12 +451,15 @@ class Client(threading.local):
             extra = ' noreply' if noreply else ''
             if time is not None:
                 for key in server_keys[server]:  # These are mangled keys
-                    write("delete %s %d%s\r\n" % (key, time, extra))
+                    fullcmd = self._encode_cmd('delete', key, time,
+                                               extra, b'\r\n')
+                    write(fullcmd)
             else:
                 for key in server_keys[server]:  # These are mangled keys
-                    write("delete %s%s\r\n" % (key, extra))
+                    fullcmd = self._encode_cmd('delete', key, extra, b'\r\n')
+                    write(fullcmd)
             try:
-                server.send_cmds(''.join(bigcmd))
+                server.send_cmds(b''.join(bigcmd))
             except socket.error as msg:
                 rc = 0
                 if isinstance(msg, tuple):
@@ -484,7 +478,7 @@ class Client(threading.local):
         for server, keys in six.iteritems(server_keys):
             try:
                 for key in keys:
-                    server.expect("DELETED")
+                    server.expect(b"DELETED")
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -911,7 +905,7 @@ class Client(threading.local):
         for server, keys in six.iteritems(server_keys):
             try:
                 for key in keys:
-                    if server.readline() == 'STORED':
+                    if server.readline() == b'STORED':
                         continue
                     else:
                         # un-mangle.
@@ -1266,10 +1260,8 @@ class Client(threading.local):
 
             Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
             Contains control characters  (Raises MemcachedKeyCharacterError).
-            Is not a string (Raises MemcachedStringEncodingError)
-            Is an unicode string (Raises MemcachedStringEncodingError)
-            Is not a string (Raises MemcachedKeyError)
-            Is None (Raises MemcachedKeyError)
+            Is not a string (Raises MemcachedKeyTypeError)
+            Is None (Raises MemcachedKeyNoneError)
         """
         if isinstance(key, tuple):
             key = key[1]
@@ -1501,11 +1493,11 @@ if __name__ == "__main__":
 
         def test_setget(key, val, noreply=False):
             global failures
-            print("Testing set/get (noreply=%s) {'%s': %s} ..."
+            print("Testing set/get (noreply=%s) {%r: %r} ..."
                   % (noreply, to_s(key), to_s(val)), end=" ")
             mc.set(key, val, noreply=noreply)
             newval = mc.get(key)
-            if newval == val:
+            if newval == val and type(newval) is type(val):
                 print("OK")
                 return 1
             else:
@@ -1526,8 +1518,19 @@ if __name__ == "__main__":
                     return self.bar == other.bar
                 return 0
 
-        test_setget("a_string", "some random string")
-        test_setget("a_string_2", "some random string", noreply=True)
+        class Thing(six.text_type):
+            pass
+
+        assert type(u"foo") is not type(Thing(u"foo"))  # noqa
+
+        test_setget("a_string", u"some random string")
+        test_setget("a_string_2", u"some random string", noreply=True)
+        test_setget("a_non_ascii_string", u"hello \u3639")
+        test_setget("a_non_ascii_string_2", u"hello \u3639", noreply=True)
+        test_setget("a_bytes_buffer", b"\x89PNG\x0D\x0A\x1A\x0A")
+        test_setget("a_bytes_buffer", b"\x89PNG\x0D\x0A\x1A\x0A", noreply=True)
+        test_setget("a_unicode_derived", Thing(u"<hello>"))
+        test_setget("a_unicode_derived_2", Thing(u"<hello>"), noreply=True)
         test_setget("an_integer", 42)
         test_setget("an_integer_2", 42, noreply=True)
         if six.PY3:
@@ -1648,20 +1651,22 @@ if __name__ == "__main__":
 
         print("Testing sending a unicode-string key...", end=" ")
         try:
-            x = mc.set(unicode('keyhere'), 1)
-        except Client.MemcachedStringEncodingError as msg:
-            print("OK", end=" ")
-        else:
+            x = mc.set(u'keyhere', 1)
+        except Client.MemcachedKeyTypeError:
             print("FAIL", end=" ")
             failures += 1
+        else:
+            print("OK", end=" ")
+
         try:
-            x = mc.set((unicode('a')*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
-        except Client.MemcachedKeyError:
+            x = mc.set((u'a'*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
+        except Client.MemcachedKeyTypeError:
             print("FAIL", end=" ")
             failures += 1
         else:
             print("OK", end=" ")
-        s = pickle.loads('V\\u4f1a\np0\n.')
+
+        s = pickle.loads(b'V\\u4f1a\np0\n.')
         try:
             x = mc.set((s * SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
         except Client.MemcachedKeyLengthError:
@@ -1687,7 +1692,7 @@ if __name__ == "__main__":
 
         print("Testing set_multi() with no memcacheds running", end=" ")
         mc.disconnect_all()
-        errors = mc.set_multi({'keyhere': 'a', 'keythere': 'b'})
+        errors = mc.set_multi({'keyhere': u'a', 'keythere': u'b'})
         if errors != []:
             print("FAIL")
             failures += 1
@@ -1696,7 +1701,7 @@ if __name__ == "__main__":
 
         print("Testing delete_multi() with no memcacheds running", end=" ")
         mc.disconnect_all()
-        ret = mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
+        ret = mc.delete_multi(('keyhere', 'keythere'))
         if ret != 1:
             print("FAIL")
             failures += 1
