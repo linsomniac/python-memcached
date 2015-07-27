@@ -143,6 +143,7 @@ class Client(threading.local):
     _FLAG_INTEGER = 1 << 1
     _FLAG_LONG = 1 << 2
     _FLAG_COMPRESSED = 1 << 3
+    _FLAG_TEXT = 1 << 4
 
     _SERVER_RETRIES = 10  # how many times to try finding a free server.
 
@@ -931,6 +932,7 @@ class Client(threading.local):
         if isinstance(val, six.binary_type):
             pass
         elif isinstance(val, six.text_type):
+            flags |= Client._FLAG_TEXT
             val = val.encode('utf-8')
         elif isinstance(val, int):
             flags |= Client._FLAG_INTEGER
@@ -1226,11 +1228,10 @@ class Client(threading.local):
             flags &= ~Client._FLAG_COMPRESSED
 
         if flags == 0:
-            # Bare string
-            if six.PY3:
-                val = buf.decode('utf8')
-            else:
-                val = buf
+            # Bare bytes
+            val = buf
+        elif flags & Client._FLAG_TEXT:
+            val = buf.decode('utf8')
         elif flags & Client._FLAG_INTEGER:
             val = int(buf)
         elif flags & Client._FLAG_LONG:
