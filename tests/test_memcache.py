@@ -120,6 +120,9 @@ class TestMemcache(TestCase):
         self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1)
         self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1, noreply=True)
 
+    def test_setget_boolean(self):
+        """GitHub issue #75. Set/get with boolean values."""
+        self.check_setget("bool", True)
 
 if __name__ == "__main__":
     # failures = 0
