@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+#  Release the specified version.
+
+if [ "$#" -ne 1 ]; then
+	echo "usage: ${0##*/} [VERSION]"
+	exit 1
+fi
+
+if [ "$( git status --porcelain | wc -c)" -ne 0 ]; then
+	echo "ERROR: Outstanding local changes from git."
+	exit 1
+fi
+
+VERSION="$1"
+
+if [ -f /tmp/python-memcached-"$VERSION".tar.gz ]; then
+	echo "ERROR: Release files already in /tmp"
+	exit 1
+fi
+
+sed -ri 's/^(\s*version=).*$/\1"'"$VERSION"'",/' setup.py
+sed -ri 's/^(\s*__version__\s*=\s*).*$/\1"'"$VERSION"'"/' memcache.py
+sed -ri 's/^(\sVersion:\s*).*$/\1"'"$VERSION"'"/' PKG-INFO
+
+git tag -s "$VERSION"
+git push
+git push --tags
+
+cd /tmp
+release "$VERSION" python-memcached
+cd python-memcached-"$VERSION"
+python setup.py sdist bdist_wheel upload
