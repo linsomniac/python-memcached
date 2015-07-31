@@ -90,7 +90,7 @@ valid_key_chars_re = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
 #  Original author: Evan Martin of Danga Interactive
 __author__ = "Sean Reifschneider <jafo-memcached@tummy.com>"
-__version__ = "1.56"
+__version__ = "1.57"
 __copyright__ = "Copyright (C) 2003 Danga Interactive"
 #  http://en.wikipedia.org/wiki/Python_Software_Foundation_License
 __license__ = "Python Software Foundation License"
@@ -934,7 +934,7 @@ class Client(threading.local):
             val = val.encode('utf-8')
         elif isinstance(val, int):
             flags |= Client._FLAG_INTEGER
-            val = str(val)
+            val = '%d' % val
             if six.PY3:
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
