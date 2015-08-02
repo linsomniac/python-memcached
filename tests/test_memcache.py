@@ -148,7 +148,7 @@ class TestMemcache(unittest.TestCase):
         value = 'a' * SERVER_MAX_VALUE_LENGTH
         self.assertFalse(self.mc.set(key, value))
         # This test fails if the -I option is used on the memcached server
-        self.assertIs(self.mc.get(key), None)
+        self.assertTrue(self.mc.get(key) is None)
 
     def test_get_set_multi_key_prefix(self):
         """Testing set_multi() with no memcacheds running."""
