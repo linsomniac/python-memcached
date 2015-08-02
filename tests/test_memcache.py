@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import time
 import unittest
 
 import six
@@ -128,7 +127,6 @@ class TestMemcache(unittest.TestCase):
     def test_setget_boolean(self):
         """GitHub issue #75. Set/get with boolean values."""
         self.check_setget("bool", True)
-
 
     def test_unicode_key(self):
         s = six.u('\u4f1a')
