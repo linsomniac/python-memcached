@@ -53,18 +53,20 @@ class test_Memcached_Set_Multi(unittest.TestCase):
         self.old_socket = socket.socket
         socket.socket = FakeSocket
 
+        self.mc = memcache.Client(['memcached'], debug=True)
+
     def tearDown(self):
         socket.socket = self.old_socket
 
     def test_Socket_Disconnect(self):
-        client = memcache.Client(['memcached'], debug=True)
         mapping = {'foo': 'FOO', 'bar': 'BAR'}
-        bad_keys = client.set_multi(mapping)
+        bad_keys = self.mc.set_multi(mapping)
 
         self.assertEqual(sorted(bad_keys), ['bar', 'foo'])
 
         if DEBUG:
             print('set_multi({0!r}) -> {1!r}'.format(mapping, bad_keys))
+
 
 if __name__ == '__main__':
     unittest.main()
