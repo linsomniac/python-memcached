@@ -258,12 +258,12 @@ class Client(threading.local):
         return key
 
     def _encode_cmd(self, cmd, key, headers, noreply, *args):
-        cmd_bytes = cmd.encode() if six.PY3 else cmd
+        cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
         fullcmd = [cmd_bytes, b' ', key]
 
         if headers:
             if six.PY3:
-                headers = headers.encode()
+                headers = headers.encode('utf-8')
             fullcmd.append(b' ')
             fullcmd.append(headers)
 
@@ -410,7 +410,10 @@ class Client(threading.local):
             if server.connect():
                 # print("(using server %s)" % server,)
                 return server, key
-            serverhash = serverHashFunction(str(serverhash) + str(i))
+            serverhash = str(serverhash) + str(i)
+            if isinstance(serverhash, six.text_type):
+                serverhash = serverhash.encode('ascii')
+            serverhash = serverHashFunction(serverhash)
         return None, None
 
     def disconnect_all(self):
@@ -456,15 +459,15 @@ class Client(threading.local):
         for server in six.iterkeys(server_keys):
             bigcmd = []
             write = bigcmd.append
-            extra = ' noreply' if noreply else ''
             if time is not None:
-                for key in server_keys[server]:  # These are mangled keys
-                    write("delete %s %d%s\r\n" % (key, time, extra))
+                headers = str(time)
             else:
-                for key in server_keys[server]:  # These are mangled keys
-                    write("delete %s%s\r\n" % (key, extra))
+                headers = None
+            for key in server_keys[server]:  # These are mangled keys
+                cmd = self._encode_cmd('delete', key, headers, noreply, b'\r\n')
+                write(cmd)
             try:
-                server.send_cmds(''.join(bigcmd))
+                server.send_cmds(b''.join(bigcmd))
             except socket.error as msg:
                 rc = 0
                 if isinstance(msg, tuple):
@@ -483,7 +486,7 @@ class Client(threading.local):
         for server, keys in six.iteritems(server_keys):
             try:
                 for key in keys:
-                    server.expect("DELETED")
+                    server.expect(b"DELETED")
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -528,9 +531,10 @@ class Client(threading.local):
             return 0
         self._statlog(cmd)
         if time is not None and time != 0:
-            fullcmd = self._encode_cmd(cmd, key, str(time), noreply)
+            headers = str(time)
         else:
-            fullcmd = self._encode_cmd(cmd, key, None, noreply)
+            headers = None
+        fullcmd = self._encode_cmd(cmd, key, headers, noreply)
 
         try:
             server.send_cmd(fullcmd)
@@ -905,12 +909,12 @@ class Client(threading.local):
 
         #  short-circuit if there are no servers, just return all keys
         if not server_keys:
-            return(mapping.keys())
+            return list(mapping.keys())
 
         for server, keys in six.iteritems(server_keys):
             try:
                 for key in keys:
-                    if server.readline() == 'STORED':
+                    if server.readline() == b'STORED':
                         continue
                     else:
                         # un-mangle.
@@ -1039,7 +1043,7 @@ class Client(threading.local):
             self._statlog(cmd)
 
             try:
-                cmd_bytes = cmd.encode() if six.PY3 else cmd
+                cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
                 fullcmd = b''.join((cmd_bytes, b' ', key))
                 server.send_cmd(fullcmd)
                 rkey = flags = rlen = cas_id = None
@@ -1434,9 +1438,11 @@ class _Host(object):
         if self.debug and line != text:
             if six.PY3:
                 text = text.decode('utf8')
-                line = line.decode('utf8', 'replace')
+                log_line = line.decode('utf8', 'replace')
+            else:
+                log_line = line
             self.debuglog("while expecting %r, got unexpected response %r"
-                          % (text, line))
+                          % (text, log_line))
         return line
 
     def recv(self, rlen):
@@ -1472,236 +1478,13 @@ def _doctest():
     import doctest
     import memcache
     servers = ["127.0.0.1:11211"]
-    mc = Client(servers, debug=1)
+    mc = memcache.Client(servers, debug=1)
     globs = {"mc": mc}
-    return doctest.testmod(memcache, globs=globs)
-
-if __name__ == "__main__":
-    failures = 0
-    print("Testing docstrings...")
-    _doctest()
-    print("Running tests:")
-    print()
-    serverList = [["127.0.0.1:11211"]]
-    if '--do-unix' in sys.argv:
-        serverList.append([os.path.join(os.getcwd(), 'memcached.socket')])
-
-    for servers in serverList:
-        mc = Client(servers, debug=1)
-
-        def to_s(val):
-            if not isinstance(val, _str_cls):
-                return "%s (%s)" % (val, type(val))
-            return "%s" % val
-
-        def test_setget(key, val, noreply=False):
-            global failures
-            print("Testing set/get (noreply=%s) {'%s': %s} ..."
-                  % (noreply, to_s(key), to_s(val)), end=" ")
-            mc.set(key, val, noreply=noreply)
-            newval = mc.get(key)
-            if newval == val:
-                print("OK")
-                return 1
-            else:
-                print("FAIL")
-                failures += 1
-                return 0
-
-        class FooStruct(object):
-
-            def __init__(self):
-                self.bar = "baz"
-
-            def __str__(self):
-                return "A FooStruct"
-
-            def __eq__(self, other):
-                if isinstance(other, FooStruct):
-                    return self.bar == other.bar
-                return 0
-
-        test_setget("a_string", "some random string")
-        test_setget("a_string_2", "some random string", noreply=True)
-        test_setget("an_integer", 42)
-        test_setget("an_integer_2", 42, noreply=True)
-        if six.PY3:
-            ok = test_setget("long", 1 << 30)
-        else:
-            ok = test_setget("long", long(1 << 30))
-        if ok:
-            print("Testing delete ...", end=" ")
-            if mc.delete("long"):
-                print("OK")
-            else:
-                print("FAIL")
-                failures += 1
-            print("Checking results of delete ...", end=" ")
-            if mc.get("long") is None:
-                print("OK")
-            else:
-                print("FAIL")
-                failures += 1
-        print("Testing get_multi ...",)
-        print(mc.get_multi(["a_string", "an_integer", "a_string_2",
-                            "an_integer_2"]))
-
-        #  removed from the protocol
-        # if test_setget("timed_delete", 'foo'):
-        #     print "Testing timed delete ...",
-        #     if mc.delete("timed_delete", 1):
-        #         print("OK")
-        #     else:
-        #         print("FAIL")
-        #         failures += 1
-        #     print "Checking results of timed delete ..."
-        #     if mc.get("timed_delete") is None:
-        #         print("OK")
-        #     else:
-        #         print("FAIL")
-        #         failures += 1
-
-        print("Testing get(unknown value) ...", end=" ")
-        print(to_s(mc.get("unknown_value")))
-
-        f = FooStruct()
-        test_setget("foostruct", f)
-        test_setget("foostruct_2", f, noreply=True)
-
-        print("Testing incr ...", end=" ")
-        x = mc.incr("an_integer", 1)
-        if x == 43:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-
-        print("Testing incr (noreply=True) ...", end=" ")
-        mc.incr("an_integer_2", 1, noreply=True)
-        x = mc.get("an_integer_2")
-        if x == 43:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-
-        print("Testing decr ...", end=" ")
-        x = mc.decr("an_integer", 1)
-        if x == 42:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-        sys.stdout.flush()
-
-        print("Testing decr (noreply=True) ...", end=" ")
-        mc.decr("an_integer_2", 1, noreply=True)
-        x = mc.get("an_integer_2")
-        if x == 42:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-        sys.stdout.flush()
-
-        # sanity tests
-        print("Testing sending spaces...", end=" ")
-        sys.stdout.flush()
-        try:
-            x = mc.set("this has spaces", 1)
-        except Client.MemcachedKeyCharacterError as msg:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-
-        print("Testing sending control characters...", end=" ")
-        try:
-            x = mc.set("this\x10has\x11control characters\x02", 1)
-        except Client.MemcachedKeyCharacterError as msg:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-
-        print("Testing using insanely long key...", end=" ")
-        try:
-            x = mc.set('a'*SERVER_MAX_KEY_LENGTH, 1)
-            x = mc.set('a'*SERVER_MAX_KEY_LENGTH, 1, noreply=True)
-        except Client.MemcachedKeyLengthError as msg:
-            print("FAIL")
-            failures += 1
-        else:
-            print("OK")
-        try:
-            x = mc.set('a'*SERVER_MAX_KEY_LENGTH + 'a', 1)
-        except Client.MemcachedKeyLengthError as msg:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-
-        print("Testing sending a unicode-string key...", end=" ")
-        try:
-            x = mc.set(unicode('keyhere'), 1)
-        except Client.MemcachedStringEncodingError as msg:
-            print("OK", end=" ")
-        else:
-            print("FAIL", end=" ")
-            failures += 1
-        try:
-            x = mc.set((unicode('a')*SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
-        except Client.MemcachedKeyError:
-            print("FAIL", end=" ")
-            failures += 1
-        else:
-            print("OK", end=" ")
-        s = pickle.loads('V\\u4f1a\np0\n.')
-        try:
-            x = mc.set((s * SERVER_MAX_KEY_LENGTH).encode('utf-8'), 1)
-        except Client.MemcachedKeyLengthError:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-
-        print("Testing using a value larger than the memcached value limit...")
-        print('NOTE: "MemCached: while expecting[...]" is normal...')
-        x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH)
-        if mc.get('keyhere') is None:
-            print("OK", end=" ")
-        else:
-            print("FAIL", end=" ")
-            failures += 1
-        x = mc.set('keyhere', 'a'*SERVER_MAX_VALUE_LENGTH + 'aaa')
-        if mc.get('keyhere') is None:
-            print("OK")
-        else:
-            print("FAIL")
-            failures += 1
-
-        print("Testing set_multi() with no memcacheds running", end=" ")
-        mc.disconnect_all()
-        errors = mc.set_multi({'keyhere': 'a', 'keythere': 'b'})
-        if errors != []:
-            print("FAIL")
-            failures += 1
-        else:
-            print("OK")
-
-        print("Testing delete_multi() with no memcacheds running", end=" ")
-        mc.disconnect_all()
-        ret = mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
-        if ret != 1:
-            print("FAIL")
-            failures += 1
-        else:
-            print("OK")
-
-    if failures > 0:
-        print('*** THERE WERE FAILED TESTS')
+    results = doctest.testmod(memcache, globs=globs)
+    mc.disconnect_all()
+    print("Doctests: %s" % (results,))
+    if results.failed:
         sys.exit(1)
-    sys.exit(0)
 
 
 # vim: ts=4 sw=4 et :
