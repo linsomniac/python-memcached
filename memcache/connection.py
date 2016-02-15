@@ -3,9 +3,9 @@ from __future__ import (
     absolute_import,
 )
 
+import logging
 import re
 import socket
-import sys
 import time
 
 import six
@@ -61,10 +61,7 @@ class Connection(object):
         self.flush_on_next_connect = 0
 
         self.buffer = b''
-
-    def debuglog(self, str):
-        if self.debug:
-            sys.stderr.write("MemCached: %s\n" % str)
+        self.logger = logging.getLogger('memcache.connection')
 
     def _check_dead(self):
         if self.deaduntil and self.deaduntil > time.time():
@@ -78,7 +75,7 @@ class Connection(object):
         return 0
 
     def mark_dead(self, reason):
-        self.debuglog("MemCache: %s: %s.  Marking dead." % (self, reason))
+        self.logger.debug("MemCache: %s: %s.  Marking dead." % (self, reason))
         self.deaduntil = time.time() + self.dead_retry
         if self.flush_on_reconnect:
             self.flush_on_next_connect = 1
@@ -162,8 +159,8 @@ class Connection(object):
                 log_line = line.decode('utf8', 'replace')
             else:
                 log_line = line
-            self.debuglog("while expecting %r, got unexpected response %r"
-                          % (text, log_line))
+            self.logger.debug("while expecting %r, got unexpected response %r"
+                              % (text, log_line))
         return line
 
     def recv(self, rlen):
