@@ -44,7 +44,10 @@ More detailed documentation is available in the L{Client} class.
 
 """
 
-from __future__ import print_function
+from __future__ import (
+    print_function,
+    absolute_import,
+)
 
 import binascii
 import pickle
@@ -56,6 +59,8 @@ import time
 import zlib
 
 import six
+
+from . import exc
 
 
 def cmemcache_hash(key):
@@ -100,15 +105,6 @@ SERVER_MAX_KEY_LENGTH = 250
 # module.
 SERVER_MAX_VALUE_LENGTH = 1024 * 1024
 
-
-class _Error(Exception):
-    pass
-
-
-class _ConnectionDeadError(Exception):
-    pass
-
-
 _DEAD_RETRY = 30  # number of seconds before retrying a dead server.
 _SOCKET_TIMEOUT = 3  # number of seconds before sockets timeout.
 
@@ -143,25 +139,6 @@ class Client(threading.local):
     _FLAG_COMPRESSED = 1 << 3
 
     _SERVER_RETRIES = 10  # how many times to try finding a free server.
-
-    # exceptions for Client
-    class MemcachedKeyError(Exception):
-        pass
-
-    class MemcachedKeyLengthError(MemcachedKeyError):
-        pass
-
-    class MemcachedKeyCharacterError(MemcachedKeyError):
-        pass
-
-    class MemcachedKeyNoneError(MemcachedKeyError):
-        pass
-
-    class MemcachedKeyTypeError(MemcachedKeyError):
-        pass
-
-    class MemcachedStringEncodingError(Exception):
-        pass
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
@@ -919,7 +896,7 @@ class Client(threading.local):
                     else:
                         # un-mangle.
                         notstored.append(prefixed_to_orig_key[key])
-            except (_Error, socket.error) as msg:
+            except (exc.MemcachedError, socket.error) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -1022,12 +999,12 @@ class Client(threading.local):
 
         try:
             return _unsafe_set()
-        except _ConnectionDeadError:
+        except exc.MemcachedConnectionDeadError:
             # retry once
             try:
                 if server._get_socket():
                     return _unsafe_set()
-            except (_ConnectionDeadError, socket.error) as msg:
+            except (exc.MemcachedConnectionDeadError, socket.error) as msg:
                 server.mark_dead(msg)
             return 0
 
@@ -1065,7 +1042,7 @@ class Client(threading.local):
                     value = self._recv_value(server, flags, rlen)
                 finally:
                     server.expect(b"END", raise_exception=True)
-            except (_Error, socket.error) as msg:
+            except (exc.MemcachedError, socket.error) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -1075,13 +1052,13 @@ class Client(threading.local):
 
         try:
             return _unsafe_get()
-        except _ConnectionDeadError:
+        except exc.MemcachedConnectionDeadError:
             # retry once
             try:
                 if server.connect():
                     return _unsafe_get()
                 return None
-            except (_ConnectionDeadError, socket.error) as msg:
+            except (exc.MemcachedConnectionDeadError, socket.error) as msg:
                 server.mark_dead(msg)
             return None
 
@@ -1187,7 +1164,7 @@ class Client(threading.local):
                         # un-prefix returned key.
                         retvals[prefixed_to_orig_key[rkey]] = val
                     line = server.readline()
-            except (_Error, socket.error) as msg:
+            except (exc.MemcachedError, socket.error) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -1219,8 +1196,8 @@ class Client(threading.local):
         rlen += 2  # include \r\n
         buf = server.recv(rlen)
         if len(buf) != rlen:
-            raise _Error("received %d bytes when expecting %d"
-                         % (len(buf), rlen))
+            raise exc.MemcachedError(
+                "received %d bytes when expecting %d" % (len(buf), rlen))
 
         if len(buf) == rlen:
             buf = buf[:-2]  # strip \r\n
@@ -1267,30 +1244,30 @@ class Client(threading.local):
             Contains control characters  (Raises MemcachedKeyCharacterError).
             Is not a string (Raises MemcachedStringEncodingError)
             Is an unicode string (Raises MemcachedStringEncodingError)
-            Is not a string (Raises MemcachedKeyError)
-            Is None (Raises MemcachedKeyError)
+            Is not a string (Raises exc.MemcachedKeyError)
+            Is None (Raises exc.MemcachedKeyError)
         """
         if isinstance(key, tuple):
             key = key[1]
         if key is None:
-            raise Client.MemcachedKeyNoneError("Key is None")
+            raise exc.MemcachedKeyNoneError("Key is None")
         if key is '':
             if key_extra_len is 0:
-                raise Client.MemcachedKeyNoneError("Key is empty")
+                raise exc.MemcachedKeyNoneError("Key is empty")
 
             #  key is empty but there is some other component to key
             return
 
         if not isinstance(key, six.binary_type):
-            raise Client.MemcachedKeyTypeError("Key must be a binary string")
+            raise exc.MemcachedKeyTypeError("Key must be a binary string")
 
         if (self.server_max_key_length != 0 and
                 len(key) + key_extra_len > self.server_max_key_length):
-            raise Client.MemcachedKeyLengthError(
+            raise exc.MemcachedKeyLengthError(
                 "Key length is > %s" % self.server_max_key_length
             )
         if not valid_key_chars_re.match(key):
-            raise Client.MemcachedKeyCharacterError(
+            raise exc.MemcachedKeyCharacterError(
                 "Control/space characters not allowed (key=%r)" % key)
 
 
@@ -1407,8 +1384,8 @@ class _Host(object):
     def readline(self, raise_exception=False):
         """Read a line and return it.
 
-        If "raise_exception" is set, raise _ConnectionDeadError if the
-        read fails, otherwise return an empty string.
+        If "raise_exception" is set, raise exc.MemcachedConnectionDeadError if
+        the read fails, otherwise return an empty string.
         """
         buf = self.buffer
         if self.socket:
@@ -1425,7 +1402,7 @@ class _Host(object):
                 # connection close, let's kill it and raise
                 self.mark_dead('connection closed in readline()')
                 if raise_exception:
-                    raise _ConnectionDeadError()
+                    raise exc.MemcachedConnectionDeadError()
                 else:
                     return ''
 
@@ -1452,8 +1429,9 @@ class _Host(object):
             foo = self_socket_recv(max(rlen - len(buf), 4096))
             buf += foo
             if not foo:
-                raise _Error('Read %d bytes, expecting %d, '
-                             'read returned 0 length bytes' % (len(buf), rlen))
+                raise exc.MemcachedError(
+                    'Read %d bytes, expecting %d, read '
+                    'returned 0 length bytes' % (len(buf), rlen))
         self.buffer = buf[rlen:]
         return buf[:rlen]
 

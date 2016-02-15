@@ -5,9 +5,12 @@ import unittest
 
 import six
 
-from memcache import Client
-from memcache import SERVER_MAX_KEY_LENGTH
-from memcache import SERVER_MAX_VALUE_LENGTH
+from memcache import exc
+from memcache import (
+    Client,
+    SERVER_MAX_KEY_LENGTH,
+    SERVER_MAX_VALUE_LENGTH,
+)
 
 try:
     _str_cls = basestring
@@ -99,29 +102,29 @@ class TestMemcache(unittest.TestCase):
     def test_sending_spaces(self):
         try:
             self.mc.set("this has spaces", 1)
-        except Client.MemcachedKeyCharacterError as err:
+        except exc.MemcachedKeyCharacterError as err:
             self.assertTrue("characters not allowed" in err.args[0])
         else:
             self.fail(
-                "Expected Client.MemcachedKeyCharacterError, nothing raised")
+                "Expected exc.MemcachedKeyCharacterError, nothing raised")
 
     def test_sending_control_characters(self):
         try:
             self.mc.set("this\x10has\x11control characters\x02", 1)
-        except Client.MemcachedKeyCharacterError as err:
+        except exc.MemcachedKeyCharacterError as err:
             self.assertTrue("characters not allowed" in err.args[0])
         else:
             self.fail(
-                "Expected Client.MemcachedKeyCharacterError, nothing raised")
+                "Expected exc.MemcachedKeyCharacterError, nothing raised")
 
     def test_sending_key_too_long(self):
         try:
             self.mc.set('a' * SERVER_MAX_KEY_LENGTH + 'a', 1)
-        except Client.MemcachedKeyLengthError as err:
+        except exc.MemcachedKeyLengthError as err:
             self.assertTrue("length is >" in err.args[0])
         else:
             self.fail(
-                "Expected Client.MemcachedKeyLengthError, nothing raised")
+                "Expected exc.MemcachedKeyLengthError, nothing raised")
 
         # These should work.
         self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1)
