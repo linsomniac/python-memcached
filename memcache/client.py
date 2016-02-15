@@ -4,6 +4,7 @@ from __future__ import (
 )
 
 import io
+import logging
 import pickle
 import re
 import socket
@@ -144,6 +145,9 @@ class Client(threading.local):
         except TypeError:
             self.picklerIsKeyword = False
 
+        self.logger = logging.getLogger('memcache.client')
+
+
     def _encode_key(self, key):
         if isinstance(key, tuple):
             if isinstance(key[1], six.text_type):
@@ -272,10 +276,6 @@ class Client(threading.local):
             if not s.connect():
                 continue
             s.flush()
-
-    def debuglog(self, str):
-        if self.debug:
-            sys.stderr.write("MemCached: %s\n" % str)
 
     def _statlog(self, func):
         if func not in self.stats:
@@ -442,7 +442,7 @@ class Client(threading.local):
             line = server.readline()
             if line and line.strip() in expected:
                 return 1
-            self.debuglog('%s expected %s, got: %r'
+            self.logger.debug('%s expected %s, got: %r'
                           % (cmd, ' or '.join(expected), line))
         except socket.error as msg:
             if isinstance(msg, tuple):
@@ -1151,10 +1151,10 @@ class Client(threading.local):
                     unpickler.persistent_load = self.persistent_load
                 val = unpickler.load()
             except Exception as e:
-                self.debuglog('Pickle error: %s\n' % e)
+                self.logger.debug('Pickle error: %s\n' % e)
                 return None
         else:
-            self.debuglog("unknown flags on get: %x\n" % flags)
+            self.logger.debug("unknown flags on get: %x\n" % flags)
             raise ValueError('Unknown flags on get: %x' % flags)
 
         return val
