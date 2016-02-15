@@ -879,6 +879,39 @@ class Client(threading.local):
 
         return (flags, len(val), val)
 
+    def _unsafe_set(self, cmd, key, val, time, min_compress_len,
+                    noreply, server):
+        self._statlog(cmd)
+
+        if cmd == 'cas' and key not in self.cas_ids:
+            return self._set('set', key, val, time, min_compress_len,
+                             noreply)
+
+        store_info = self._val_to_store_info(val, min_compress_len)
+        if not store_info:
+            return(0)
+        flags, len_val, encoded_val = store_info
+
+        if cmd == 'cas':
+            headers = ("%d %d %d %d"
+                       % (flags, time, len_val, self.cas_ids[key]))
+        else:
+            headers = "%d %d %d" % (flags, time, len_val)
+        fullcmd = self._encode_cmd(cmd, key, headers, noreply,
+                                   b'\r\n', encoded_val)
+
+        try:
+            server.send_cmd(fullcmd)
+            if noreply:
+                return True
+            return(server.expect(b"STORED", raise_exception=True)
+                   == b"STORED")
+        except socket.error as msg:
+            if isinstance(msg, tuple):
+                msg = msg[1]
+            server.mark_dead(msg)
+        return 0
+
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
         key = self._encode_key(key)
         if self.do_check_key:
@@ -887,45 +920,16 @@ class Client(threading.local):
         if not server:
             return 0
 
-        def _unsafe_set():
-            self._statlog(cmd)
-
-            if cmd == 'cas' and key not in self.cas_ids:
-                return self._set('set', key, val, time, min_compress_len,
-                                 noreply)
-
-            store_info = self._val_to_store_info(val, min_compress_len)
-            if not store_info:
-                return(0)
-            flags, len_val, encoded_val = store_info
-
-            if cmd == 'cas':
-                headers = ("%d %d %d %d"
-                           % (flags, time, len_val, self.cas_ids[key]))
-            else:
-                headers = "%d %d %d" % (flags, time, len_val)
-            fullcmd = self._encode_cmd(cmd, key, headers, noreply,
-                                       b'\r\n', encoded_val)
-
-            try:
-                server.send_cmd(fullcmd)
-                if noreply:
-                    return True
-                return(server.expect(b"STORED", raise_exception=True)
-                       == b"STORED")
-            except socket.error as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
-            return 0
-
         try:
-            return _unsafe_set()
+            return self._unsafe_set(cmd, key, val, time, min_compress_len,
+                                    noreply, server)
         except exc.MemcachedConnectionDeadError:
             # retry once
             try:
                 if server._get_socket():
-                    return _unsafe_set()
+                    return self._unsafe_set(cmd, key, val, time,
+                                            min_compress_len, noreply,
+                                            server)
             except (exc.MemcachedConnectionDeadError, socket.error) as msg:
                 server.mark_dead(msg)
             return 0
