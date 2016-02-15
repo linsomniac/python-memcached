@@ -8,7 +8,6 @@ import logging
 import pickle
 import re
 import socket
-import sys
 import threading
 import zlib
 
@@ -146,7 +145,6 @@ class Client(threading.local):
             self.picklerIsKeyword = False
 
         self.logger = logging.getLogger('memcache.client')
-
 
     def _encode_key(self, key):
         if isinstance(key, tuple):
@@ -443,7 +441,7 @@ class Client(threading.local):
             if line and line.strip() in expected:
                 return 1
             self.logger.debug('%s expected %s, got: %r'
-                          % (cmd, ' or '.join(expected), line))
+                              % (cmd, ' or '.join(expected), line))
         except socket.error as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
@@ -932,6 +930,40 @@ class Client(threading.local):
                 server.mark_dead(msg)
             return 0
 
+    def _unsafe_get(self, cmd, key, server):
+        self._statlog(cmd)
+
+        try:
+            cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
+            fullcmd = b''.join((cmd_bytes, b' ', key))
+            server.send_cmd(fullcmd)
+            rkey = flags = rlen = cas_id = None
+
+            if cmd == 'gets':
+                rkey, flags, rlen, cas_id, = self._expect_cas_value(
+                    server, raise_exception=True
+                )
+                if rkey and self.cache_cas:
+                    self.cas_ids[rkey] = cas_id
+            else:
+                rkey, flags, rlen, = self._expectvalue(
+                    server, raise_exception=True
+                )
+
+            if not rkey:
+                return None
+            try:
+                value = self._recv_value(server, flags, rlen)
+            finally:
+                server.expect(b"END", raise_exception=True)
+        except (exc.MemcachedError, socket.error) as msg:
+            if isinstance(msg, tuple):
+                msg = msg[1]
+            server.mark_dead(msg)
+            return None
+
+        return value
+
     def _get(self, cmd, key):
         key = self._encode_key(key)
         if self.do_check_key:
@@ -940,47 +972,13 @@ class Client(threading.local):
         if not server:
             return None
 
-        def _unsafe_get():
-            self._statlog(cmd)
-
-            try:
-                cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
-                fullcmd = b''.join((cmd_bytes, b' ', key))
-                server.send_cmd(fullcmd)
-                rkey = flags = rlen = cas_id = None
-
-                if cmd == 'gets':
-                    rkey, flags, rlen, cas_id, = self._expect_cas_value(
-                        server, raise_exception=True
-                    )
-                    if rkey and self.cache_cas:
-                        self.cas_ids[rkey] = cas_id
-                else:
-                    rkey, flags, rlen, = self._expectvalue(
-                        server, raise_exception=True
-                    )
-
-                if not rkey:
-                    return None
-                try:
-                    value = self._recv_value(server, flags, rlen)
-                finally:
-                    server.expect(b"END", raise_exception=True)
-            except (exc.MemcachedError, socket.error) as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
-                return None
-
-            return value
-
         try:
-            return _unsafe_get()
+            return self._unsafe_get(cmd, key, server)
         except exc.MemcachedConnectionDeadError:
             # retry once
             try:
                 if server.connect():
-                    return _unsafe_get()
+                    return self._unsafe_get(cmd, key, server)
                 return None
             except (exc.MemcachedConnectionDeadError, socket.error) as msg:
                 server.mark_dead(msg)
