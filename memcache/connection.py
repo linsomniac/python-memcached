@@ -41,19 +41,19 @@ class Connection(object):
         if not m:
             raise ValueError('Unable to parse connection string: "%s"' % host)
 
-        hostData = m.groupdict()
-        if hostData.get('proto') == 'unix':
+        host_data = m.groupdict()
+        if host_data.get('proto') == 'unix':
             self.family = socket.AF_UNIX
-            self.address = hostData['path']
-        elif hostData.get('proto') == 'inet6':
+            self.address = host_data['path']
+        elif host_data.get('proto') == 'inet6':
             self.family = socket.AF_INET6
-            self.ip = hostData['host']
-            self.port = int(hostData.get('port') or 11211)
+            self.ip = host_data['host']
+            self.port = int(host_data.get('port') or 11211)
             self.address = (self.ip, self.port)
         else:
             self.family = socket.AF_INET
-            self.ip = hostData['host']
-            self.port = int(hostData.get('port') or 11211)
+            self.ip = host_data['host']
+            self.port = int(host_data.get('port') or 11211)
             self.address = (self.ip, self.port)
 
         self.deaduntil = 0
