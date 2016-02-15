@@ -239,11 +239,6 @@ class Client(threading.local):
                 continue
             s.flush()
 
-    def forget_dead_hosts(self):
-        """Reset every host in the pool to an "alive" state."""
-        for s in self.servers:
-            s.deaduntil = 0
-
     def _get_server(self, key):
         if isinstance(key, tuple):
             serverhash, key = key
@@ -263,10 +258,6 @@ class Client(threading.local):
                 serverhash = serverhash.encode('ascii')
             serverhash = utils.serverHashFunction(serverhash)
         return None, None
-
-    def disconnect_all(self):
-        for s in self.servers:
-            s.close_socket()
 
     def delete_multi(self, keys, time=0, key_prefix='', noreply=False):
         """Delete multiple keys in the memcache doing just one query.
@@ -1134,3 +1125,10 @@ class Client(threading.local):
         if not REGEX_VALID_KEY.match(key):
             raise exc.MemcachedKeyCharacterError(
                 "Control/space characters not allowed (key=%r)" % key)
+
+    def __del__(self):
+        for s in self.servers:
+            s.close_socket()
+
+    def __repr__(self):
+        return '<memcache.Client>'
