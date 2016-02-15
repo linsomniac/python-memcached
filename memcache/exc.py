@@ -1,8 +1,8 @@
-class Error(Exception):
+class MemcachedError(Exception):
     pass
 
 
-class ConnectionDeadError(Exception):
+class MemcachedConnectionDeadError(Exception):
     pass
 
 
