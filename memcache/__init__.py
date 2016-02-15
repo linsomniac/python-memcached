@@ -1473,18 +1473,4 @@ class _Host(object):
         else:
             return "unix:%s%s" % (self.address, d)
 
-
-def _doctest():
-    import doctest
-    import memcache
-    servers = ["127.0.0.1:11211"]
-    mc = memcache.Client(servers, debug=1)
-    globs = {"mc": mc}
-    results = doctest.testmod(memcache, globs=globs)
-    mc.disconnect_all()
-    print("Doctests: %s" % (results,))
-    if results.failed:
-        sys.exit(1)
-
-
 # vim: ts=4 sw=4 et :
