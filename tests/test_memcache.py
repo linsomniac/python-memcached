@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import os
 import unittest
 
 import six
@@ -35,7 +36,7 @@ class FooStruct(object):
 class TestMemcache(unittest.TestCase):
     def setUp(self):
         # TODO: unix socket server stuff
-        servers = ["127.0.0.1:11211"]
+        servers = [os.getenv("MEMCACHED") or "127.0.0.1:11211"]
         self.mc = Client(servers, debug=1)
 
     def tearDown(self):
