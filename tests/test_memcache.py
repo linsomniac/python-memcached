@@ -45,7 +45,7 @@ class TestMemcache(unittest.TestCase):
         self.mc = Client(servers, debug=1)
 
     def tearDown(self):
-        self.mc.disconnect_all()
+        del self.mc
 
     def check_setget(self, key, val, noreply=False):
         self.mc.set(key, val, noreply=noreply)
@@ -158,7 +158,6 @@ class TestMemcache(unittest.TestCase):
 
     def test_get_set_multi_key_prefix(self):
         """Testing set_multi() with no memcacheds running."""
-
         prefix = 'pfx_'
         values = {'key1': 'a', 'key2': 'b'}
         errors = self.mc.set_multi(values, key_prefix=prefix)
@@ -170,8 +169,6 @@ class TestMemcache(unittest.TestCase):
 
     def test_set_multi_dead_servers(self):
         """Testing set_multi() with no memcacheds running."""
-
-        self.mc.disconnect_all()
         for server in self.mc.servers:
             server.mark_dead('test')
         errors = self.mc.set_multi({'key1': 'a', 'key2': 'b'})
@@ -179,7 +176,6 @@ class TestMemcache(unittest.TestCase):
 
     def test_disconnect_all_delete_multi(self):
         """Testing delete_multi() with no memcacheds running."""
-        self.mc.disconnect_all()
         ret = self.mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
         self.assertEqual(ret, 1)
 
