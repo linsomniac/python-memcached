@@ -115,7 +115,6 @@ class Client(threading.local):
         self.dead_retry = dead_retry
         self.socket_timeout = socket_timeout
         self.flush_on_reconnect = flush_on_reconnect
-        self.set_servers(servers)
         self.stats = {}
         self.cache_cas = cache_cas
         self.reset_cas()
@@ -145,6 +144,19 @@ class Client(threading.local):
             self.picklerIsKeyword = False
 
         self.logger = logging.getLogger('memcache.client')
+
+        self.servers = [
+            connection.Connection(
+                s, self.debug,
+                dead_retry=self.dead_retry,
+                socket_timeout=self.socket_timeout,
+                flush_on_reconnect=self.flush_on_reconnect)
+            for s in servers]
+
+        self.buckets = []
+        for server in self.servers:
+            for i in range(server.weight):
+                self.buckets.append(server)
 
     def _encode_key(self, key):
         if isinstance(key, tuple):
@@ -181,26 +193,6 @@ class Client(threading.local):
         yourself.
         """
         self.cas_ids = {}
-
-    def set_servers(self, servers):
-        """Set the pool of servers used by this client.
-
-        @param servers: an array of servers.
-        Servers can be passed in two forms:
-            1. Strings of the form C{"host:port"}, which implies a
-            default weight of 1.
-            2. Tuples of the form C{("host:port", weight)}, where
-            C{weight} is an integer weight value.
-
-        """
-        self.servers = [
-            connection.Connection(
-                s, self.debug,
-                dead_retry=self.dead_retry,
-                socket_timeout=self.socket_timeout,
-                flush_on_reconnect=self.flush_on_reconnect)
-            for s in servers]
-        self._init_buckets()
 
     def get_stats(self, stat_args=None):
         """Get statistics from each of the servers.
@@ -285,12 +277,6 @@ class Client(threading.local):
         """Reset every host in the pool to an "alive" state."""
         for s in self.servers:
             s.deaduntil = 0
-
-    def _init_buckets(self):
-        self.buckets = []
-        for server in self.servers:
-            for i in range(server.weight):
-                self.buckets.append(server)
 
     def _get_server(self, key):
         if isinstance(key, tuple):
