@@ -5,7 +5,9 @@ import unittest
 
 import six
 
-from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH
+from memcache import Client
+from memcache import SERVER_MAX_KEY_LENGTH
+from memcache import SERVER_MAX_VALUE_LENGTH
 
 try:
     _str_cls = basestring
@@ -35,7 +37,7 @@ class FooStruct(object):
 
 class TestMemcache(unittest.TestCase):
     def setUp(self):
-        # TODO: unix socket server stuff
+        # TODO(Jeremy) unix socket server stuff
         servers = [os.getenv("MEMCACHED") or "127.0.0.1:11211"]
         self.mc = Client(servers, debug=1)
 

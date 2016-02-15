@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """client module for memcached (memory cache daemon)
 
 Overview
@@ -48,7 +47,6 @@ More detailed documentation is available in the L{Client} class.
 from __future__ import print_function
 
 import binascii
-import os
 import pickle
 import re
 import socket
@@ -464,7 +462,8 @@ class Client(threading.local):
             else:
                 headers = None
             for key in server_keys[server]:  # These are mangled keys
-                cmd = self._encode_cmd('delete', key, headers, noreply, b'\r\n')
+                cmd = self._encode_cmd('delete', key, headers,
+                                       noreply, b'\r\n')
                 write(cmd)
             try:
                 server.send_cmds(b''.join(bigcmd))
@@ -741,10 +740,11 @@ class Client(threading.local):
         return self._set("cas", key, val, time, min_compress_len, noreply)
 
     def _map_and_prefix_keys(self, key_iterable, key_prefix):
-        """Compute the mapping of server (_Host instance) -> list of keys to
-        stuff onto that server, as well as the mapping of prefixed key
-        -> original key.
-        """
+        '''Compute the mapping of server.
+
+        (_Host instance) -> list of keys to stuff onto that server,
+        as well as the mapping of prefixed key -> original key.
+        '''
         key_prefix = self._encode_key(key_prefix)
         # Check it just once ...
         key_extra_len = len(key_prefix)
