@@ -52,12 +52,12 @@ class Client(threading.local):
            debuglog,\ set, set_multi, add, replace, get, get_multi,
            incr, decr, delete, delete_multi
     """
-    _FLAG_PICKLE = 1 << 0
-    _FLAG_INTEGER = 1 << 1
-    _FLAG_LONG = 1 << 2
-    _FLAG_COMPRESSED = 1 << 3
+    FLAG_PICKLE = 1 << 0
+    FLAG_INTEGER = 1 << 1
+    FLAG_LONG = 1 << 2
+    FLAG_COMPRESSED = 1 << 3
 
-    _SERVER_RETRIES = 10  # how many times to try finding a free server.
+    SERVER_RETRIES = 10  # how many times to try finding a free server.
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
@@ -303,7 +303,7 @@ class Client(threading.local):
         if not self.buckets:
             return None, None
 
-        for i in range(Client._SERVER_RETRIES):
+        for i in range(self.SERVER_RETRIES):
             server = self.buckets[serverhash % len(self.buckets)]
             if server.connect():
                 # print("(using server %s)" % server,)
@@ -838,21 +838,21 @@ class Client(threading.local):
         elif isinstance(val, six.text_type):
             val = val.encode('utf-8')
         elif isinstance(val, int):
-            flags |= Client._FLAG_INTEGER
+            flags |= self.FLAG_INTEGER
             val = '%d' % val
             if six.PY3:
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
         elif six.PY2 and isinstance(val, long):
-            flags |= Client._FLAG_LONG
+            flags |= self.FLAG_LONG
             val = str(val)
             if six.PY3:
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
         else:
-            flags |= Client._FLAG_PICKLE
+            flags |= self.FLAG_PICKLE
             file = io.BytesIO()
             if self.picklerIsKeyword:
                 pickler = self.pickler(file, protocol=self.pickleProtocol)
@@ -871,7 +871,7 @@ class Client(threading.local):
             # Only retain the result if the compression result is smaller
             # than the original.
             if len(comp_val) < lv:
-                flags |= Client._FLAG_COMPRESSED
+                flags |= self.FLAG_COMPRESSED
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
@@ -1126,9 +1126,9 @@ class Client(threading.local):
         if len(buf) == rlen:
             buf = buf[:-2]  # strip \r\n
 
-        if flags & Client._FLAG_COMPRESSED:
+        if flags & self.FLAG_COMPRESSED:
             buf = self.decompressor(buf)
-            flags &= ~Client._FLAG_COMPRESSED
+            flags &= ~self.FLAG_COMPRESSED
 
         if flags == 0:
             # Bare string
@@ -1136,14 +1136,14 @@ class Client(threading.local):
                 val = buf.decode('utf8')
             else:
                 val = buf
-        elif flags & Client._FLAG_INTEGER:
+        elif flags & self.FLAG_INTEGER:
             val = int(buf)
-        elif flags & Client._FLAG_LONG:
+        elif flags & self.FLAG_LONG:
             if six.PY3:
                 val = int(buf)
             else:
                 val = long(buf)
-        elif flags & Client._FLAG_PICKLE:
+        elif flags & self.FLAG_PICKLE:
             try:
                 file = io.BytesIO(buf)
                 unpickler = self.unpickler(file)
