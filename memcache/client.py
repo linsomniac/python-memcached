@@ -232,46 +232,12 @@ class Client(threading.local):
 
         return(data)
 
-    def get_slabs(self):
-        data = []
-        for s in self.servers:
-            if not s.connect():
-                continue
-            if s.family == socket.AF_INET:
-                name = '%s:%s (%s)' % (s.ip, s.port, s.weight)
-            elif s.family == socket.AF_INET6:
-                name = '[%s]:%s (%s)' % (s.ip, s.port, s.weight)
-            else:
-                name = 'unix:%s (%s)' % (s.address, s.weight)
-            serverData = {}
-            data.append((name, serverData))
-            s.send_cmd('stats items')
-            readline = s.readline
-            while 1:
-                line = readline()
-                if not line or line.strip() == 'END':
-                    break
-                item = line.split(' ', 2)
-                # 0 = STAT, 1 = ITEM, 2 = Value
-                slab = item[1].split(':', 2)
-                # 0 = items, 1 = Slab #, 2 = Name
-                if slab[1] not in serverData:
-                    serverData[slab[1]] = {}
-                serverData[slab[1]][slab[2]] = item[2]
-        return data
-
     def flush_all(self):
         """Expire all data in memcache servers that are reachable."""
         for s in self.servers:
             if not s.connect():
                 continue
             s.flush()
-
-    def _statlog(self, func):
-        if func not in self.stats:
-            self.stats[func] = 1
-        else:
-            self.stats[func] += 1
 
     def forget_dead_hosts(self):
         """Reset every host in the pool to an "alive" state."""
@@ -328,8 +294,6 @@ class Client(threading.local):
         @return: 1 if no failure in communication with any memcacheds.
         @rtype: int
         """
-
-        self._statlog('delete_multi')
 
         server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
             keys, key_prefix)
@@ -412,7 +376,6 @@ class Client(threading.local):
         server, key = self._get_server(key)
         if not server:
             return 0
-        self._statlog(cmd)
         if time is not None and time != 0:
             headers = str(time)
         else:
@@ -492,7 +455,6 @@ class Client(threading.local):
         server, key = self._get_server(key)
         if not server:
             return None
-        self._statlog(cmd)
         fullcmd = self._encode_cmd(cmd, key, str(delta), noreply)
         try:
             server.send_cmd(fullcmd)
@@ -751,8 +713,6 @@ class Client(threading.local):
 
         @rtype: list
         '''
-        self._statlog('set_multi')
-
         server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
             six.iterkeys(mapping), key_prefix)
 
@@ -867,8 +827,6 @@ class Client(threading.local):
 
     def _unsafe_set(self, cmd, key, val, time, min_compress_len,
                     noreply, server):
-        self._statlog(cmd)
-
         if cmd == 'cas' and key not in self.cas_ids:
             return self._set('set', key, val, time, min_compress_len,
                              noreply)
@@ -921,8 +879,6 @@ class Client(threading.local):
             return 0
 
     def _unsafe_get(self, cmd, key, server):
-        self._statlog(cmd)
-
         try:
             cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
             fullcmd = b''.join((cmd_bytes, b' ', key))
@@ -1042,9 +998,6 @@ class Client(threading.local):
         available. If key_prefix was provided, the keys in the retured
         dictionary will not have it present.
         '''
-
-        self._statlog('get_multi')
-
         server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
             keys, key_prefix)
 
