@@ -56,6 +56,8 @@ class Client(threading.local):
     FLAG_LONG = 1 << 2
     FLAG_COMPRESSED = 1 << 3
 
+    CONNECTIONS = connection.ConnectionPool
+
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
                  compressor=zlib.compress, decompressor=zlib.decompress,
@@ -140,7 +142,7 @@ class Client(threading.local):
             'socket_timeout': socket_timeout,
             'flush_on_reconnect': flush_on_reconnect,
         }
-        self.connections = connection.ConnectionPool(
+        self.connections = self.CONNECTIONS(
             servers,
             conn_settings,
         )
