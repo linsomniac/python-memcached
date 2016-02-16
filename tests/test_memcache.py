@@ -12,20 +12,8 @@ from memcache import (
     SERVER_MAX_VALUE_LENGTH,
 )
 
-try:
-    _str_cls = basestring
-except NameError:
-    _str_cls = str
-
-
-def to_s(val):
-    if not isinstance(val, _str_cls):
-        return "%s (%s)" % (val, type(val))
-    return "%s" % val
-
 
 class FooStruct(object):
-
     def __init__(self):
         self.bar = "baz"
 
@@ -178,6 +166,43 @@ class TestMemcache(unittest.TestCase):
         """Testing delete_multi() with no memcacheds running."""
         ret = self.mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
         self.assertEqual(ret, 1)
+
+    def test_delete_multi_doctest(self):
+        self.mc.set_multi({'a1': 'val1', 'a2': 'val2'})
+        self.assertEqual(self.mc.get_multi(['a1', 'a2']),
+                         {'a1': 'val1', 'a2': 'val2'})
+        self.assertTrue(self.mc.delete_multi(['key1', 'key2']))
+        self.assertEqual(self.mc.get_multi(['key1', 'key2']), {})
+
+    def test_incr_doctest(self):
+        self.mc.set("counter", "20")
+        self.assertEqual(self.mc.incr("counter"), 21)
+        self.assertEqual(self.mc.incr("counter"), 22)
+
+    def test_set_multi_doctest(self):
+        self.mc.set_multi({'key1': 'val1', 'key2': 'val2'})
+        self.assertEqual(self.mc.get_multi(['key1', 'key2']),
+                         {'key1': 'val1', 'key2': 'val2'})
+
+    def test_set_multi_notset_doctest(self):
+        notset_keys = self.mc.set_multi({'key1': 'val1', 'key2': 'val2'},
+                                        key_prefix='subspace_')
+        self.assertFalse(notset_keys)
+
+    def test_get_multi_doctest(self):
+        self.mc.set("foo", "bar")
+        self.mc.set("baz", 42)
+        self.assertEqual(self.mc.get_multi(["foo", "baz", "foobar"]),
+                         {"foo": "bar", "baz": 42})
+        self.assertEqual(self.mc.set_multi({'k1': 1, 'k2': 2},
+                                           key_prefix='pfx_'), [])
+
+    def test_get_multi_numbers_doctest(self):
+        self.mc.set_multi({42: 'douglass adams',
+                          46: 'and 2 just ahead of me'},
+                          key_prefix='numkeys_')
+        self.assertEqual(self.mc.get_multi([46, 42], key_prefix='numkeys_'),
+                         {42: 'douglass adams', 46: 'and 2 just ahead of me'})
 
 
 if __name__ == '__main__':

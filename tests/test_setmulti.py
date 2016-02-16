@@ -11,14 +11,15 @@ from __future__ import (
     print_function,
     absolute_import)
 
-import socket
 import logging
+import socket
 import unittest
 
 import memcache
 
 DEBUG = False
 logger = logging.getLogger(__file__)
+
 
 class FakeSocket(object):
     def __init__(self, *args):
