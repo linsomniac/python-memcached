@@ -109,9 +109,6 @@ class Client(threading.local):
         """
         super(Client, self).__init__()
         self.debug = debug
-        self.dead_retry = dead_retry
-        self.socket_timeout = socket_timeout
-        self.flush_on_reconnect = flush_on_reconnect
         self.stats = {}
         self.cache_cas = cache_cas
         self.reset_cas()
@@ -144,9 +141,9 @@ class Client(threading.local):
 
         conn_settings = {
             'debug': self.debug,
-            'dead_retry': self.dead_retry,
-            'socket_timeout': self.socket_timeout,
-            'flush_on_reconnect': self.flush_on_reconnect,
+            'dead_retry': dead_retry,
+            'socket_timeout': socket_timeout,
+            'flush_on_reconnect': flush_on_reconnect,
         }
         self.connections = connection.ConnectionPool(
             servers,
