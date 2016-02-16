@@ -16,7 +16,7 @@ DEAD_RETRY = 30  # number of seconds before retrying a dead server.
 SOCKET_TIMEOUT = 3  # number of seconds before sockets timeout.
 
 
-class Server(object):
+class Connection(object):
     def __init__(self, host, debug=0, dead_retry=DEAD_RETRY,
                  socket_timeout=SOCKET_TIMEOUT, flush_on_reconnect=0):
         self.dead_retry = dead_retry

@@ -146,7 +146,7 @@ class Client(threading.local):
         self.logger = logging.getLogger('memcache.client')
 
         self.servers = [
-            connection.Server(
+            connection.Connection(
                 s, self.debug,
                 dead_retry=self.dead_retry,
                 socket_timeout=self.socket_timeout,
@@ -579,7 +579,7 @@ class Client(threading.local):
     def _map_and_prefix_keys(self, key_iterable, key_prefix):
         '''Compute the mapping of server.
 
-        (connection.Server instance) -> list of keys to stuff onto
+        (connection.Connection instance) -> list of keys to stuff onto
         that server, as well as the mapping of prefixed key -> original key.
         '''
         key_prefix = self._encode_key(key_prefix)
@@ -588,7 +588,7 @@ class Client(threading.local):
         if key_prefix and self.do_check_key:
             self.check_key(key_prefix)
 
-        # server (connection.Server) ->
+        # server (connection.Connection) ->
         # list of unprefixed server keys in mapping
         server_keys = {}
 
