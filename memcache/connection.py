@@ -159,10 +159,9 @@ class Connection(object):
         return line
 
     def recv(self, rlen):
-        self_socket_recv = self.socket.recv
         buf = self.buffer
         while len(buf) < rlen:
-            foo = self_socket_recv(max(rlen - len(buf), 4096))
+            foo = self.socket.recv(max(rlen - len(buf), 4096))
             buf += foo
             if not foo:
                 raise exc.MemcachedError(
