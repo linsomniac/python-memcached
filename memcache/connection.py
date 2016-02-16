@@ -71,9 +71,7 @@ class Connection(object):
         return 0
 
     def connect(self):
-        if self._get_socket():
-            return 1
-        return 0
+        return bool(self._get_socket())
 
     def mark_dead(self, reason):
         self.logger.debug("MemCache: %s: %s.  Marking dead." % (self, reason))
