@@ -136,7 +136,6 @@ class Client(threading.local):
         self.logger = logging.getLogger('memcache.client')
 
         conn_settings = {
-            'debug': self.debug,
             'dead_retry': dead_retry,
             'socket_timeout': socket_timeout,
             'flush_on_reconnect': flush_on_reconnect,
@@ -195,7 +194,7 @@ class Client(threading.local):
             not converted from strings.
         """
         data = []
-        for s in self.servers:
+        for s in self.connections:
             if not s.connect():
                 continue
             if s.family == socket.AF_INET:
@@ -222,7 +221,7 @@ class Client(threading.local):
 
     def flush_all(self):
         """Expire all data in memcache servers that are reachable."""
-        for s in self.servers:
+        for s in self.connections:
             if not s.connect():
                 continue
             s.flush()

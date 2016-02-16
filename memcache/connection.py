@@ -18,11 +18,10 @@ SOCKET_TIMEOUT = 3  # number of seconds before sockets timeout.
 
 
 class Connection(object):
-    def __init__(self, host, debug=0, dead_retry=DEAD_RETRY,
+    def __init__(self, host, dead_retry=DEAD_RETRY,
                  socket_timeout=SOCKET_TIMEOUT, flush_on_reconnect=0):
         self.dead_retry = dead_retry
         self.socket_timeout = socket_timeout
-        self.debug = debug
         self.flush_on_reconnect = flush_on_reconnect
         if isinstance(host, tuple):
             host, self.weight = host
@@ -152,7 +151,7 @@ class Connection(object):
 
     def expect(self, text, raise_exception=False):
         line = self.readline(raise_exception)
-        if self.debug and line != text:
+        if line != text:
             if six.PY3:
                 text = text.decode('utf8')
                 log_line = line.decode('utf8', 'replace')
