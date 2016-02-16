@@ -16,6 +16,8 @@ import six
 from . import (
     connection,
     exc,
+    utils,
+
 )
 
 SERVER_MAX_KEY_LENGTH = 250
@@ -146,32 +148,6 @@ class Client(threading.local):
             conn_settings,
         )
 
-    def _encode_key(self, key):
-        if isinstance(key, tuple):
-            if isinstance(key[1], six.text_type):
-                return (key[0], key[1].encode('utf8'))
-        elif isinstance(key, six.text_type):
-            return key.encode('utf8')
-        return key
-
-    def _encode_cmd(self, cmd, key, headers, noreply, *args):
-        cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
-        fullcmd = [cmd_bytes, b' ', key]
-
-        if headers:
-            if six.PY3:
-                headers = headers.encode('utf-8')
-            fullcmd.append(b' ')
-            fullcmd.append(headers)
-
-        if noreply:
-            fullcmd.append(b' noreply')
-
-        if args:
-            fullcmd.append(b' ')
-            fullcmd.extend(args)
-        return b''.join(fullcmd)
-
     def reset_cas(self):
         """Reset the cas cache.
 
@@ -269,7 +245,7 @@ class Client(threading.local):
             else:
                 headers = None
             for key in server_keys[server]:  # These are mangled keys
-                cmd = self._encode_cmd('delete', key, headers,
+                cmd = utils.encode_command('delete', key, headers,
                                        noreply, b'\r\n')
                 write(cmd)
             try:
@@ -329,7 +305,7 @@ class Client(threading.local):
         return self._deletetouch([b'TOUCHED'], "touch", key, time, noreply)
 
     def _deletetouch(self, expected, cmd, key, time=0, noreply=False):
-        key = self._encode_key(key)
+        key = utils.encode_key(key)
         self.check_key(key)
         server, key = self.connections.get(key)
         if not server:
@@ -338,7 +314,7 @@ class Client(threading.local):
             headers = str(time)
         else:
             headers = None
-        fullcmd = self._encode_cmd(cmd, key, headers, noreply)
+        fullcmd = utils.encode_command(cmd, key, headers, noreply)
 
         try:
             server.send_one(fullcmd)
@@ -407,12 +383,12 @@ class Client(threading.local):
         return self._incrdecr("decr", key, delta, noreply)
 
     def _incrdecr(self, cmd, key, delta, noreply=False):
-        key = self._encode_key(key)
+        key = utils.encode_key(key)
         self.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return None
-        fullcmd = self._encode_cmd(cmd, key, str(delta), noreply)
+        fullcmd = utils.encode_command(cmd, key, str(delta), noreply)
         try:
             server.send_one(fullcmd)
             if noreply:
@@ -548,7 +524,7 @@ class Client(threading.local):
         (connection.Connection instance) -> list of keys to stuff onto
         that server, as well as the mapping of prefixed key -> original key.
         '''
-        key_prefix = self._encode_key(key_prefix)
+        key_prefix = utils.encode_key(key_prefix)
         # Check it just once ...
         key_extra_len = len(key_prefix)
         if key_prefix:
@@ -567,7 +543,7 @@ class Client(threading.local):
                 # Ensure call to _get_server gets a Tuple as well.
                 serverhash, key = orig_key
 
-                key = self._encode_key(key)
+                key = utils.encode_key(key)
                 if not isinstance(key, six.binary_type):
                     # set_multi supports int / long keys.
                     key = str(key)
@@ -582,7 +558,7 @@ class Client(threading.local):
 
                 orig_key = orig_key[1]
             else:
-                key = self._encode_key(orig_key)
+                key = utils.encode_key(orig_key)
                 if not isinstance(key, six.binary_type):
                     # set_multi supports int / long keys.
                     key = str(key)
@@ -687,7 +663,7 @@ class Client(threading.local):
                     if store_info:
                         flags, len_val, val = store_info
                         headers = "%d %d %d" % (flags, time, len_val)
-                        fullcmd = self._encode_cmd('set', key, headers,
+                        fullcmd = utils.encode_command('set', key, headers,
                                                    noreply,
                                                    b'\r\n', val, b'\r\n')
                         write(fullcmd)
@@ -797,7 +773,7 @@ class Client(threading.local):
                        % (flags, time, len_val, self.cas_ids[key]))
         else:
             headers = "%d %d %d" % (flags, time, len_val)
-        fullcmd = self._encode_cmd(cmd, key, headers, noreply,
+        fullcmd = utils.encode_command(cmd, key, headers, noreply,
                                    b'\r\n', encoded_val)
 
         try:
@@ -813,7 +789,7 @@ class Client(threading.local):
         return 0
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
-        key = self._encode_key(key)
+        key = utils.encode_key(key)
         self.check_key(key)
         server, key = self.connections.get(key)
         if not server:
@@ -866,7 +842,7 @@ class Client(threading.local):
         return value
 
     def _get(self, cmd, key):
-        key = self._encode_key(key)
+        key = utils.encode_key(key)
         self.check_key(key)
         server, key = self.connections.get(key)
         if not server:
