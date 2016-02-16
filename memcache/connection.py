@@ -17,6 +17,11 @@ import six
 from . import exc
 
 
+SERVER_MAX_KEY_LENGTH = 250
+# Storing values larger than 1MB requires starting memcached with -I <size> for
+# memcached >= 1.4.2 or recompiling for < 1.4.2.
+
+
 class Connection(object):
     DEAD_RETRY = 30  # number of seconds before retrying a dead server
     SOCKET_TIMEOUT = 3   # number of seconds before sockets timeout
@@ -34,12 +39,16 @@ class Connection(object):
     UNPICKLER = pickle.Unpickler
     PICKLE_PROTOCOL = 0
 
+    MAX_VALUE_LENGTH = 1024 * 1024
+
     def __init__(self, host, dead_retry=None, persistent_load=None,
-                 socket_timeout=None, flush_on_reconnect=None):
+                 socket_timeout=None, flush_on_reconnect=None,
+                 persistent_id=None):
         self.dead_retry = dead_retry or self.DEAD_RETRY
         self.socket_timeout = socket_timeout or self.SOCKET_TIMEOUT
         self.flush_on_reconnect = flush_on_reconnect or self.FLUSH_ON_RECONNECT
         self.persistent_load = persistent_load
+        self.persistent_id = persistent_id
 
         if isinstance(host, tuple):
             host, self.weight = host
@@ -254,6 +263,60 @@ class Connection(object):
     def flush(self):
         self.send_one('flush_all')
         self.expect(b'OK')
+
+    def convert_value(self, val, min_compress_len):
+        """Transform val to a storable representation.
+
+        Returns a tuple of the flags, the length of the new value, and
+        the new value itself.
+        """
+        flags = 0
+        if isinstance(val, six.binary_type):
+            pass
+        elif isinstance(val, six.text_type):
+            val = val.encode('utf-8')
+        elif isinstance(val, int):
+            flags |= self.FLAG_INTEGER
+            val = '%d' % val
+            if six.PY3:
+                val = val.encode('ascii')
+            # force no attempt to compress this silly string.
+            min_compress_len = 0
+        elif six.PY2 and isinstance(val, long):
+            flags |= self.FLAG_LONG
+            val = str(val)
+            if six.PY3:
+                val = val.encode('ascii')
+            # force no attempt to compress this silly string.
+            min_compress_len = 0
+        else:
+            flags |= self.FLAG_PICKLE
+            file = io.BytesIO()
+            try:
+                pickler = self.PICKLER(file, protocol=self.PICKLE_PROTOCOL)
+            except TypeError:
+                pickler = self.PICKLER(file, self.PICKLE_PROTOCOL)
+            if self.persistent_id:
+                pickler.persistent_id = self.persistent_id
+            pickler.dump(val)
+            val = file.getvalue()
+
+        lv = len(val)
+        # We should try to compress if min_compress_len > 0
+        # and this string is longer than our min threshold.
+        if min_compress_len and lv > min_compress_len:
+            comp_val = self.COMPRESSOR(val)
+            # Only retain the result if the compression result is smaller
+            # than the original.
+            if len(comp_val) < lv:
+                flags |= self.FLAG_COMPRESSED
+                val = comp_val
+
+        #  silently do not store if value length exceeds maximum
+        if (len(val) > self.MAX_VALUE_LENGTH):
+            return(0)
+
+        return (flags, len(val), val)
 
     def __str__(self):
         d = ''

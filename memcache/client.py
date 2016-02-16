@@ -3,7 +3,6 @@ from __future__ import (
     absolute_import,
 )
 
-import io
 import logging
 import pickle
 import re
@@ -21,11 +20,6 @@ from . import (
 )
 
 SERVER_MAX_KEY_LENGTH = 250
-# Storing values larger than 1MB requires starting memcached with -I <size> for
-# memcached >= 1.4.2 or recompiling for < 1.4.2. If you do, this value can be
-# changed by doing "memcache.SERVER_MAX_VALUE_LENGTH = N" after importing this
-# module.
-SERVER_MAX_VALUE_LENGTH = 1024 * 1024
 REGEX_VALID_KEY = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
 
@@ -64,7 +58,6 @@ class Client(threading.local):
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
                  compressor=zlib.compress, decompressor=zlib.decompress,
                  pload=None, pid=None, server_max_key_length=None,
-                 server_max_value_length=None,
                  dead_retry=None, socket_timeout=None,
                  cache_cas=False, flush_on_reconnect=None):
         """Create a new Client object with the given list of servers.
@@ -124,21 +117,11 @@ class Client(threading.local):
         self.server_max_key_length = server_max_key_length
         if self.server_max_key_length is None:
             self.server_max_key_length = SERVER_MAX_KEY_LENGTH
-        self.server_max_value_length = server_max_value_length
-        if self.server_max_value_length is None:
-            self.server_max_value_length = SERVER_MAX_VALUE_LENGTH
-
-        #  figure out the pickler style
-        file = io.BytesIO()
-        try:
-            pickler = self.pickler(file, protocol=self.pickleProtocol)
-            self.picklerIsKeyword = True
-        except TypeError:
-            self.picklerIsKeyword = False
 
         self.logger = logging.getLogger('memcache.client')
 
         conn_settings = {
+            'persistent_id': pid,
             'persistent_load': pload,
             'dead_retry': dead_retry,
             'socket_timeout': socket_timeout,
@@ -658,7 +641,7 @@ class Client(threading.local):
             write = bigcmd.append
             try:
                 for key in server_keys[server]:  # These are mangled keys
-                    store_info = self._val_to_store_info(
+                    store_info = server.convert_value(
                         mapping[prefixed_to_orig_key[key]],
                         min_compress_len)
                     if store_info:
@@ -703,68 +686,13 @@ class Client(threading.local):
                 server.mark_dead(msg)
         return notstored
 
-    def _val_to_store_info(self, val, min_compress_len):
-        """Transform val to a storable representation.
-
-        Returns a tuple of the flags, the length of the new value, and
-        the new value itself.
-        """
-        flags = 0
-        if isinstance(val, six.binary_type):
-            pass
-        elif isinstance(val, six.text_type):
-            val = val.encode('utf-8')
-        elif isinstance(val, int):
-            flags |= self.FLAG_INTEGER
-            val = '%d' % val
-            if six.PY3:
-                val = val.encode('ascii')
-            # force no attempt to compress this silly string.
-            min_compress_len = 0
-        elif six.PY2 and isinstance(val, long):
-            flags |= self.FLAG_LONG
-            val = str(val)
-            if six.PY3:
-                val = val.encode('ascii')
-            # force no attempt to compress this silly string.
-            min_compress_len = 0
-        else:
-            flags |= self.FLAG_PICKLE
-            file = io.BytesIO()
-            if self.picklerIsKeyword:
-                pickler = self.pickler(file, protocol=self.pickleProtocol)
-            else:
-                pickler = self.pickler(file, self.pickleProtocol)
-            if self.persistent_id:
-                pickler.persistent_id = self.persistent_id
-            pickler.dump(val)
-            val = file.getvalue()
-
-        lv = len(val)
-        # We should try to compress if min_compress_len > 0
-        # and this string is longer than our min threshold.
-        if min_compress_len and lv > min_compress_len:
-            comp_val = self.compressor(val)
-            # Only retain the result if the compression result is smaller
-            # than the original.
-            if len(comp_val) < lv:
-                flags |= self.FLAG_COMPRESSED
-                val = comp_val
-
-        #  silently do not store if value length exceeds maximum
-        if (self.server_max_value_length != 0 and
-                len(val) > self.server_max_value_length):
-            return(0)
-
-        return (flags, len(val), val)
-
     def _unsafe_set(self, cmd, key, val, time, min_compress_len,
                     noreply, server):
         if cmd == 'cas' and key not in self.cas_ids:
             return self._set('set', key, val, time, min_compress_len,
                              noreply)
 
-        store_info = self._val_to_store_info(val, min_compress_len)
+        store_info = server.convert_value(val, min_compress_len)
         if not store_info:
             return(0)
         flags, len_val, encoded_val = store_info

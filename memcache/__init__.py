@@ -52,7 +52,6 @@ __all__ = [
     'Client',
     'exc',
     'SERVER_MAX_KEY_LENGTH',
-    'SERVER_MAX_VALUE_LENGTH',
 ]
 #  Original author: Evan Martin of Danga Interactive
 __author__ = "Sean Reifschneider <jafo-memcached@tummy.com>"
@@ -66,5 +65,4 @@ from . import exc
 from .client import (
     Client,
     SERVER_MAX_KEY_LENGTH,
-    SERVER_MAX_VALUE_LENGTH,
 )

@@ -9,8 +9,8 @@ from memcache import exc
 from memcache import (
     Client,
     SERVER_MAX_KEY_LENGTH,
-    SERVER_MAX_VALUE_LENGTH,
 )
+from memcache.connection import Connection
 
 
 class FooStruct(object):
@@ -135,11 +135,11 @@ class TestMemcache(unittest.TestCase):
         # NOTE: "MemCached: while expecting[...]" is normal...
         key = 'keyhere'
 
-        value = 'a' * (SERVER_MAX_VALUE_LENGTH // 2)
+        value = 'a' * (Connection.MAX_VALUE_LENGTH // 2)
         self.assertTrue(self.mc.set(key, value))
         self.assertEqual(self.mc.get(key), value)
 
-        value = 'a' * SERVER_MAX_VALUE_LENGTH
+        value = 'a' * Connection.MAX_VALUE_LENGTH
         self.assertFalse(self.mc.set(key, value))
         # This test fails if the -I option is used on the memcached server
         self.assertTrue(self.mc.get(key) is None)
