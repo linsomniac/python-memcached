@@ -824,7 +824,7 @@ class Client(threading.local):
         except exc.MemcachedConnectionDeadError:
             # retry once
             try:
-                if server._get_socket():
+                if server.connect():
                     return self._unsafe_set(cmd, key, val, time,
                                             min_compress_len, noreply,
                                             server)

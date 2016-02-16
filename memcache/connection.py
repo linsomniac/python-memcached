@@ -70,18 +70,8 @@ class Connection(object):
         return 0
 
     def connect(self):
-        return bool(self._get_socket())
-
-    def mark_dead(self, reason):
-        self.logger.debug("MemCache: %s: %s.  Marking dead." % (self, reason))
-        self.deaduntil = time.time() + self.dead_retry
-        if self.flush_on_reconnect:
-            self.flush_on_next_connect = 1
-        self.close()
-
-    def _get_socket(self):
         if self._check_dead():
-            return None
+            return
         if self.socket:
             return self.socket
         s = socket.socket(self.family, socket.SOCK_STREAM)
@@ -103,6 +93,13 @@ class Connection(object):
             self.flush()
             self.flush_on_next_connect = 0
         return s
+
+    def mark_dead(self, reason):
+        self.logger.debug("MemCache: %s: %s.  Marking dead." % (self, reason))
+        self.deaduntil = time.time() + self.dead_retry
+        if self.flush_on_reconnect:
+            self.flush_on_next_connect = 1
+        self.close()
 
     def close(self):
         if self.socket:
