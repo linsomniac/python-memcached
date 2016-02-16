@@ -142,12 +142,15 @@ class Client(threading.local):
 
         self.logger = logging.getLogger('memcache.client')
 
+        conn_settings = {
+            'debug': self.debug,
+            'dead_retry': self.dead_retry,
+            'socket_timeout': self.socket_timeout,
+            'flush_on_reconnect': self.flush_on_reconnect,
+        }
         self.connections = connection.ConnectionPool(
             servers,
-            debug=self.debug,
-            dead_retry=self.dead_retry,
-            socket_timeout=self.socket_timeout,
-            flush_on_reconnect=self.flush_on_reconnect,
+            conn_settings,
         )
 
     def _encode_key(self, key):

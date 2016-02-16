@@ -197,8 +197,8 @@ class Connection(object):
 class ConnectionPool(object):
     CONNECTION_RETRIES = 10  # how many times to try finding a free server.
 
-    def __init__(self, connections, **kw):
-        self.connection = [Connection(c, **kw) for c in connections]
+    def __init__(self, connections, conn_settings):
+        self.connection = [Connection(c, **conn_settings) for c in connections]
         self.buckets = []
         for conn in self.connection:
             self.buckets.extend([conn for c in range(conn.weight)])
