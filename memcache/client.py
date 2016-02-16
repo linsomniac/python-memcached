@@ -817,15 +817,13 @@ class Client(threading.local):
             rkey = flags = rlen = cas_id = None
 
             if cmd == 'gets':
-                rkey, flags, rlen, cas_id, = self._expect_cas_value(
-                    server, raise_exception=True
-                )
+                rkey, flags, rlen, cas_id, = \
+                    server.expect_cas_value(raise_exception=True)
                 if rkey and self.cache_cas:
                     self.cas_ids[rkey] = cas_id
             else:
-                rkey, flags, rlen, = self._expectvalue(
-                    server, raise_exception=True
-                )
+                rkey, flags, rlen, = \
+                    server.expect_value(raise_exception=True)
 
             if not rkey:
                 return None
@@ -952,7 +950,7 @@ class Client(threading.local):
             try:
                 line = server.readline()
                 while line and line != b'END':
-                    rkey, flags, rlen = self._expectvalue(server, line)
+                    rkey, flags, rlen = server.expect_value(line)
                     #  Bo Yang reports that this can sometimes be None
                     if rkey is not None:
                         val = self._recv_value(server, flags, rlen)
@@ -964,28 +962,6 @@ class Client(threading.local):
                     msg = msg[1]
                 server.mark_dead(msg)
         return retvals
-
-    def _expect_cas_value(self, server, line=None, raise_exception=False):
-        if not line:
-            line = server.readline(raise_exception)
-
-        if line and line[:5] == b'VALUE':
-            resp, rkey, flags, len, cas_id = line.split()
-            return (rkey, int(flags), int(len), int(cas_id))
-        else:
-            return (None, None, None, None)
-
-    def _expectvalue(self, server, line=None, raise_exception=False):
-        if not line:
-            line = server.readline(raise_exception)
-
-        if line and line[:5] == b'VALUE':
-            resp, rkey, flags, len = line.split()
-            flags = int(flags)
-            rlen = int(len)
-            return (rkey, flags, rlen)
-        else:
-            return (None, None, None)
 
     def _recv_value(self, server, flags, rlen):
         rlen += 2  # include \r\n

@@ -158,6 +158,28 @@ class Connection(object):
                               % (text, log_line))
         return line
 
+    def expect_cas_value(self, line=None, raise_exception=False):
+        if not line:
+            line = self.readline(raise_exception)
+
+        if line and line[:5] == b'VALUE':
+            resp, rkey, flags, len, cas_id = line.split()
+            return (rkey, int(flags), int(len), int(cas_id))
+        else:
+            return (None, None, None, None)
+
+    def expect_value(self, line=None, raise_exception=False):
+        if not line:
+            line = self.readline(raise_exception)
+
+        if line and line[:5] == b'VALUE':
+            resp, rkey, flags, len = line.split()
+            flags = int(flags)
+            rlen = int(len)
+            return (rkey, flags, rlen)
+        else:
+            return (None, None, None)
+
     def recv(self, rlen):
         buf = self.buffer
         while len(buf) < rlen:
