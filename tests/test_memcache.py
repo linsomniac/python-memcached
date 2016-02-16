@@ -157,8 +157,8 @@ class TestMemcache(unittest.TestCase):
 
     def test_set_multi_dead_servers(self):
         """Testing set_multi() with no memcacheds running."""
-        for server in self.mc.servers:
-            server.mark_dead('test')
+        for conn in self.mc.connections:
+            conn.mark_dead('test')
         errors = self.mc.set_multi({'key1': 'a', 'key2': 'b'})
         self.assertEqual(sorted(errors), ['key1', 'key2'])
 

@@ -51,8 +51,6 @@ from __future__ import (
 __all__ = [
     'Client',
     'exc',
-    'serverHashFunction',
-    'useOldServerHashFunction',
     'SERVER_MAX_KEY_LENGTH',
     'SERVER_MAX_VALUE_LENGTH',
 ]
@@ -69,8 +67,4 @@ from .client import (
     Client,
     SERVER_MAX_KEY_LENGTH,
     SERVER_MAX_VALUE_LENGTH,
-)
-from .utils import (
-    serverHashFunction,
-    useOldServerHashFunction,
 )

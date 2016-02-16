@@ -3,6 +3,7 @@ from __future__ import (
     absolute_import,
 )
 
+import binascii
 import logging
 import re
 import socket
@@ -191,3 +192,42 @@ class Connection(object):
             return "inet6:[%s]:%d%s" % (self.address[0], self.address[1], d)
         else:
             return "unix:%s%s" % (self.address, d)
+
+
+class ConnectionPool(object):
+    CONNECTION_RETRIES = 10  # how many times to try finding a free server.
+
+    def __init__(self, connections, **kw):
+        self.connection = [Connection(c, **kw) for c in connections]
+        self.buckets = []
+        for conn in self.connection:
+            self.buckets.extend([conn for c in range(conn.weight)])
+
+    @classmethod
+    def cmemcache_hash(cls, key):
+        return ((((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1)
+
+    def get(self, key):
+        if isinstance(key, tuple):
+            conn_hash, key = key
+        else:
+            conn_hash = self.cmemcache_hash(key)
+
+        if not self.buckets:
+            return None, None
+
+        for i in range(self.CONNECTION_RETRIES):
+            conn = self.buckets[conn_hash % len(self.buckets)]
+            if conn.connect():
+                break
+            conn_hash = str(conn_hash) + str(i)
+            if isinstance(conn_hash, six.text_type):
+                conn_hash = conn_hash.encode('ascii')
+            conn_hash = self.cmemcache_hash(conn_hash)
+        else:
+            return None, None
+        return conn, key
+
+    def __iter__(self):
+        for conn in self.connection:
+            yield conn

@@ -16,7 +16,6 @@ import six
 from . import (
     connection,
     exc,
-    utils,
 )
 
 SERVER_MAX_KEY_LENGTH = 250
@@ -56,8 +55,6 @@ class Client(threading.local):
     FLAG_INTEGER = 1 << 1
     FLAG_LONG = 1 << 2
     FLAG_COMPRESSED = 1 << 3
-
-    SERVER_RETRIES = 10  # how many times to try finding a free server.
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
@@ -145,18 +142,13 @@ class Client(threading.local):
 
         self.logger = logging.getLogger('memcache.client')
 
-        self.servers = [
-            connection.Connection(
-                s, self.debug,
-                dead_retry=self.dead_retry,
-                socket_timeout=self.socket_timeout,
-                flush_on_reconnect=self.flush_on_reconnect)
-            for s in servers]
-
-        self.buckets = []
-        for server in self.servers:
-            for i in range(server.weight):
-                self.buckets.append(server)
+        self.connections = connection.ConnectionPool(
+            servers,
+            debug=self.debug,
+            dead_retry=self.dead_retry,
+            socket_timeout=self.socket_timeout,
+            flush_on_reconnect=self.flush_on_reconnect,
+        )
 
     def _encode_key(self, key):
         if isinstance(key, tuple):
@@ -238,26 +230,6 @@ class Client(threading.local):
             if not s.connect():
                 continue
             s.flush()
-
-    def _get_server(self, key):
-        if isinstance(key, tuple):
-            serverhash, key = key
-        else:
-            serverhash = utils.serverHashFunction(key)
-
-        if not self.buckets:
-            return None, None
-
-        for i in range(self.SERVER_RETRIES):
-            server = self.buckets[serverhash % len(self.buckets)]
-            if server.connect():
-                # print("(using server %s)" % server,)
-                return server, key
-            serverhash = str(serverhash) + str(i)
-            if isinstance(serverhash, six.text_type):
-                serverhash = serverhash.encode('ascii')
-            serverhash = utils.serverHashFunction(serverhash)
-        return None, None
 
     def delete_multi(self, keys, time=0, key_prefix='', noreply=False):
         """Delete multiple keys in the memcache doing just one query.
@@ -364,7 +336,7 @@ class Client(threading.local):
         key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
-        server, key = self._get_server(key)
+        server, key = self.connections.get(key)
         if not server:
             return 0
         if time is not None and time != 0:
@@ -443,7 +415,7 @@ class Client(threading.local):
         key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
-        server, key = self._get_server(key)
+        server, key = self.connections.get(key)
         if not server:
             return None
         fullcmd = self._encode_cmd(cmd, key, str(delta), noreply)
@@ -611,7 +583,7 @@ class Client(threading.local):
 
                 # Gotta pre-mangle key before hashing to a
                 # server. Returns the mangled key.
-                server, key = self._get_server(
+                server, key = self.connections.get(
                     (serverhash, key_prefix + key))
 
                 orig_key = orig_key[1]
@@ -623,7 +595,7 @@ class Client(threading.local):
                     if six.PY3:
                         key = key.encode('utf8')
                 bytes_orig_key = key
-                server, key = self._get_server(key_prefix + key)
+                server, key = self.connections.get(key_prefix + key)
 
             #  alert when passed in key is None
             if orig_key is None:
@@ -851,7 +823,7 @@ class Client(threading.local):
         key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
-        server, key = self._get_server(key)
+        server, key = self.connections.get(key)
         if not server:
             return 0
 
@@ -905,7 +877,7 @@ class Client(threading.local):
         key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
-        server, key = self._get_server(key)
+        server, key = self.connections.get(key)
         if not server:
             return None
 
@@ -1127,8 +1099,8 @@ class Client(threading.local):
                 "Control/space characters not allowed (key=%r)" % key)
 
     def __del__(self):
-        for s in self.servers:
-            s.close_socket()
+        for conn in self.connections:
+            conn.close_socket()
 
     def __repr__(self):
         return '<memcache.Client>'
