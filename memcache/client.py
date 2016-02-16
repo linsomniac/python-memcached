@@ -63,7 +63,7 @@ class Client(threading.local):
                  server_max_value_length=None,
                  dead_retry=connection.DEAD_RETRY,
                  socket_timeout=connection.SOCKET_TIMEOUT,
-                 cache_cas=False, flush_on_reconnect=0, check_keys=True):
+                 cache_cas=False, flush_on_reconnect=0):
         """Create a new Client object with the given list of servers.
 
         @param servers: C{servers} is passed to L{set_servers}.
@@ -103,16 +103,12 @@ class Client(threading.local):
         can read stale data that was overwritten on another
         server. This flag is off by default for backwards
         compatibility.
-        @param check_keys: (default True) If True, the key is checked
-        to ensure it is the correct length and composed of the right
-        characters.
         """
         super(Client, self).__init__()
         self.debug = debug
         self.stats = {}
         self.cache_cas = cache_cas
         self.reset_cas()
-        self.do_check_key = check_keys
 
         # Allow users to modify pickling/unpickling behavior
         self.pickleProtocol = pickleProtocol
@@ -334,8 +330,7 @@ class Client(threading.local):
 
     def _deletetouch(self, expected, cmd, key, time=0, noreply=False):
         key = self._encode_key(key)
-        if self.do_check_key:
-            self.check_key(key)
+        self.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return 0
@@ -413,8 +408,7 @@ class Client(threading.local):
 
     def _incrdecr(self, cmd, key, delta, noreply=False):
         key = self._encode_key(key)
-        if self.do_check_key:
-            self.check_key(key)
+        self.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return None
@@ -557,7 +551,7 @@ class Client(threading.local):
         key_prefix = self._encode_key(key_prefix)
         # Check it just once ...
         key_extra_len = len(key_prefix)
-        if key_prefix and self.do_check_key:
+        if key_prefix:
             self.check_key(key_prefix)
 
         # server (connection.Connection) ->
@@ -602,8 +596,7 @@ class Client(threading.local):
                 self.check_key(orig_key, key_extra_len=key_extra_len)
 
             # Now check to make sure key length is proper ...
-            if self.do_check_key:
-                self.check_key(bytes_orig_key, key_extra_len=key_extra_len)
+            self.check_key(bytes_orig_key, key_extra_len=key_extra_len)
 
             if not server:
                 continue
@@ -821,8 +814,7 @@ class Client(threading.local):
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
         key = self._encode_key(key)
-        if self.do_check_key:
-            self.check_key(key)
+        self.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return 0
@@ -875,8 +867,7 @@ class Client(threading.local):
 
     def _get(self, cmd, key):
         key = self._encode_key(key)
-        if self.do_check_key:
-            self.check_key(key)
+        self.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return None
