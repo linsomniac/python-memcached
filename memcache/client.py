@@ -51,21 +51,20 @@ class Client(threading.local):
            debuglog,\ set, set_multi, add, replace, get, get_multi,
            incr, decr, delete, delete_multi
     """
+    CONNECTIONS = connection.ConnectionPool
+
     FLAG_PICKLE = 1 << 0
     FLAG_INTEGER = 1 << 1
     FLAG_LONG = 1 << 2
     FLAG_COMPRESSED = 1 << 3
-
-    CONNECTIONS = connection.ConnectionPool
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
                  compressor=zlib.compress, decompressor=zlib.decompress,
                  pload=None, pid=None, server_max_key_length=None,
                  server_max_value_length=None,
-                 dead_retry=connection.DEAD_RETRY,
-                 socket_timeout=connection.SOCKET_TIMEOUT,
-                 cache_cas=False, flush_on_reconnect=0):
+                 dead_retry=None, socket_timeout=None,
+                 cache_cas=False, flush_on_reconnect=None):
         """Create a new Client object with the given list of servers.
 
         @param servers: C{servers} is passed to L{set_servers}.

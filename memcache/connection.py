@@ -13,16 +13,18 @@ import six
 
 from . import exc
 
-DEAD_RETRY = 30  # number of seconds before retrying a dead server.
-SOCKET_TIMEOUT = 3  # number of seconds before sockets timeout.
-
 
 class Connection(object):
-    def __init__(self, host, dead_retry=DEAD_RETRY,
-                 socket_timeout=SOCKET_TIMEOUT, flush_on_reconnect=0):
-        self.dead_retry = dead_retry
-        self.socket_timeout = socket_timeout
-        self.flush_on_reconnect = flush_on_reconnect
+    DEAD_RETRY = 30  # number of seconds before retrying a dead server
+    SOCKET_TIMEOUT = 3   # number of seconds before sockets timeout
+    FLUSH_ON_RECONNECT = False
+
+    def __init__(self, host, dead_retry=None,
+                 socket_timeout=None, flush_on_reconnect=None):
+        self.dead_retry = dead_retry or self.DEAD_RETRY
+        self.socket_timeout = socket_timeout or self.SOCKET_TIMEOUT
+        self.flush_on_reconnect = flush_on_reconnect or self.FLUSH_ON_RECONNECT
+
         if isinstance(host, tuple):
             host, self.weight = host
         else:
@@ -189,7 +191,8 @@ class ConnectionPool(object):
     CONNECTION_RETRIES = 10  # how many times to try finding a free server.
 
     def __init__(self, connections, conn_settings):
-        self.connection = [self.CONNECTION(c, **conn_settings) for c in connections]
+        self.connection = [self.CONNECTION(c, **conn_settings)
+                           for c in connections]
         self.buckets = []
         for conn in self.connection:
             self.buckets.extend([conn for c in range(conn.weight)])
