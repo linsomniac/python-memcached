@@ -63,15 +63,11 @@ class Connection(object):
         self.buffer = b''
         self.logger = logging.getLogger('memcache.connection')
 
-    def _check_dead(self):
-        if self.deaduntil and self.deaduntil > time.time():
-            return 1
-        self.deaduntil = 0
-        return 0
-
     def connect(self):
-        if self._check_dead():
+        if self.deaduntil and self.deaduntil > time.time():
             return
+        self.deaduntil = 0
+
         if self.socket:
             return self.socket
         s = socket.socket(self.family, socket.SOCK_STREAM)
