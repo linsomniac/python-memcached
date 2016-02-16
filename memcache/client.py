@@ -20,7 +20,6 @@ from . import (
 )
 
 SERVER_MAX_KEY_LENGTH = 250
-REGEX_VALID_KEY = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
 
 class Client(threading.local):
@@ -53,6 +52,8 @@ class Client(threading.local):
     FLAG_INTEGER = 1 << 1
     FLAG_LONG = 1 << 2
     FLAG_COMPRESSED = 1 << 3
+
+    REGEX_VALID_KEY = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
@@ -923,7 +924,7 @@ class Client(threading.local):
             raise exc.MemcachedKeyLengthError(
                 "Key length is > %s" % self.server_max_key_length
             )
-        if not REGEX_VALID_KEY.match(key):
+        if not self.REGEX_VALID_KEY.match(key):
             raise exc.MemcachedKeyCharacterError(
                 "Control/space characters not allowed (key=%r)" % key)
 
