@@ -104,16 +104,18 @@ class Connection(object):
             self.socket.close()
             self.socket = None
 
-    def send_cmd(self, cmd):
-        if isinstance(cmd, six.text_type):
-            cmd = cmd.encode('utf8')
-        self.socket.sendall(cmd + b'\r\n')
+    def send_one(self, command):
+        if isinstance(command, six.text_type):
+            command = command.encode('utf8')
+        command = command + b'\r\n'
+        self.send([command])
 
-    def send_cmds(self, cmds):
-        """cmds already has trailing \r\n's applied."""
-        if isinstance(cmds, six.text_type):
-            cmds = cmds.encode('utf8')
-        self.socket.sendall(cmds)
+    def send(self, commands):
+        """commands already has trailing \r\n's applied."""
+        commands = b''.join(commands)
+        if isinstance(commands, six.text_type):
+            commands = commands.encode('utf8')
+        self.socket.sendall(commands)
 
     def readline(self, raise_exception=False):
         """Read a line and return it.
@@ -170,7 +172,7 @@ class Connection(object):
         return buf[:rlen]
 
     def flush(self):
-        self.send_cmd('flush_all')
+        self.send_one('flush_all')
         self.expect(b'OK')
 
     def __str__(self):

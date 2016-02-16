@@ -205,9 +205,9 @@ class Client(threading.local):
             else:
                 name = 'unix:%s (%s)' % (s.address, s.weight)
             if not stat_args:
-                s.send_cmd('stats')
+                s.send_one('stats')
             else:
-                s.send_cmd('stats ' + stat_args)
+                s.send_one('stats ' + stat_args)
             serverData = {}
             data.append((name, serverData))
             readline = s.readline
@@ -273,7 +273,7 @@ class Client(threading.local):
                                        noreply, b'\r\n')
                 write(cmd)
             try:
-                server.send_cmds(b''.join(bigcmd))
+                server.send(bigcmd)
             except socket.error as msg:
                 rc = 0
                 if isinstance(msg, tuple):
@@ -341,7 +341,7 @@ class Client(threading.local):
         fullcmd = self._encode_cmd(cmd, key, headers, noreply)
 
         try:
-            server.send_cmd(fullcmd)
+            server.send_one(fullcmd)
             if noreply:
                 return 1
             line = server.readline()
@@ -414,7 +414,7 @@ class Client(threading.local):
             return None
         fullcmd = self._encode_cmd(cmd, key, str(delta), noreply)
         try:
-            server.send_cmd(fullcmd)
+            server.send_one(fullcmd)
             if noreply:
                 return
             line = server.readline()
@@ -693,7 +693,7 @@ class Client(threading.local):
                         write(fullcmd)
                     else:
                         notstored.append(prefixed_to_orig_key[key])
-                server.send_cmds(b''.join(bigcmd))
+                server.send(bigcmd)
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -801,7 +801,7 @@ class Client(threading.local):
                                    b'\r\n', encoded_val)
 
         try:
-            server.send_cmd(fullcmd)
+            server.send_one(fullcmd)
             if noreply:
                 return True
             return(server.expect(b"STORED", raise_exception=True)
@@ -837,7 +837,7 @@ class Client(threading.local):
         try:
             cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
             fullcmd = b''.join((cmd_bytes, b' ', key))
-            server.send_cmd(fullcmd)
+            server.send_one(fullcmd)
             rkey = flags = rlen = cas_id = None
 
             if cmd == 'gets':
@@ -960,7 +960,7 @@ class Client(threading.local):
         for server in six.iterkeys(server_keys):
             try:
                 fullcmd = b"get " + b" ".join(server_keys[server])
-                server.send_cmd(fullcmd)
+                server.send_one(fullcmd)
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
