@@ -139,6 +139,7 @@ class Client(threading.local):
         self.logger = logging.getLogger('memcache.client')
 
         conn_settings = {
+            'persistent_load': pload,
             'dead_retry': dead_retry,
             'socket_timeout': socket_timeout,
             'flush_on_reconnect': flush_on_reconnect,
@@ -246,7 +247,7 @@ class Client(threading.local):
                 headers = None
             for key in server_keys[server]:  # These are mangled keys
                 cmd = utils.encode_command('delete', key, headers,
-                                       noreply, b'\r\n')
+                                           noreply, b'\r\n')
                 write(cmd)
             try:
                 server.send(bigcmd)
@@ -664,8 +665,8 @@ class Client(threading.local):
                         flags, len_val, val = store_info
                         headers = "%d %d %d" % (flags, time, len_val)
                         fullcmd = utils.encode_command('set', key, headers,
-                                                   noreply,
-                                                   b'\r\n', val, b'\r\n')
+                                                       noreply,
+                                                       b'\r\n', val, b'\r\n')
                         write(fullcmd)
                     else:
                         notstored.append(prefixed_to_orig_key[key])
@@ -774,7 +775,7 @@ class Client(threading.local):
         else:
             headers = "%d %d %d" % (flags, time, len_val)
         fullcmd = utils.encode_command(cmd, key, headers, noreply,
-                                   b'\r\n', encoded_val)
+                                       b'\r\n', encoded_val)
 
         try:
             server.send_one(fullcmd)
@@ -828,7 +829,7 @@ class Client(threading.local):
             if not rkey:
                 return None
             try:
-                value = self._recv_value(server, flags, rlen)
+                value = server.recv_value(flags, rlen)
             finally:
                 server.expect(b"END", raise_exception=True)
         except (exc.MemcachedError, socket.error) as msg:
@@ -953,7 +954,7 @@ class Client(threading.local):
                     rkey, flags, rlen = server.expect_value(line)
                     #  Bo Yang reports that this can sometimes be None
                     if rkey is not None:
-                        val = self._recv_value(server, flags, rlen)
+                        val = server.recv_value(flags, rlen)
                         # un-prefix returned key.
                         retvals[prefixed_to_orig_key[rkey]] = val
                     line = server.readline()
@@ -962,49 +963,6 @@ class Client(threading.local):
                     msg = msg[1]
                 server.mark_dead(msg)
         return retvals
-
-    def _recv_value(self, server, flags, rlen):
-        rlen += 2  # include \r\n
-        buf = server.recv(rlen)
-        if len(buf) != rlen:
-            raise exc.MemcachedError(
-                "received %d bytes when expecting %d" % (len(buf), rlen))
-
-        if len(buf) == rlen:
-            buf = buf[:-2]  # strip \r\n
-
-        if flags & self.FLAG_COMPRESSED:
-            buf = self.decompressor(buf)
-            flags &= ~self.FLAG_COMPRESSED
-
-        if flags == 0:
-            # Bare string
-            if six.PY3:
-                val = buf.decode('utf8')
-            else:
-                val = buf
-        elif flags & self.FLAG_INTEGER:
-            val = int(buf)
-        elif flags & self.FLAG_LONG:
-            if six.PY3:
-                val = int(buf)
-            else:
-                val = long(buf)
-        elif flags & self.FLAG_PICKLE:
-            try:
-                file = io.BytesIO(buf)
-                unpickler = self.unpickler(file)
-                if self.persistent_load:
-                    unpickler.persistent_load = self.persistent_load
-                val = unpickler.load()
-            except Exception as e:
-                self.logger.debug('Pickle error: %s\n' % e)
-                return None
-        else:
-            self.logger.debug("unknown flags on get: %x\n" % flags)
-            raise ValueError('Unknown flags on get: %x' % flags)
-
-        return val
 
     def check_key(self, key, key_extra_len=0):
         """Checks sanity of key.

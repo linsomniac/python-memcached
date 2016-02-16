@@ -4,10 +4,13 @@ from __future__ import (
 )
 
 import binascii
+import io
 import logging
+import pickle
 import re
 import socket
 import time
+import zlib
 
 import six
 
@@ -19,11 +22,24 @@ class Connection(object):
     SOCKET_TIMEOUT = 3   # number of seconds before sockets timeout
     FLUSH_ON_RECONNECT = False
 
-    def __init__(self, host, dead_retry=None,
+    FLAG_PICKLE = 1 << 0
+    FLAG_INTEGER = 1 << 1
+    FLAG_LONG = 1 << 2
+    FLAG_COMPRESSED = 1 << 3
+
+    COMPRESSOR = zlib.compress
+    DECOMPRESSOR = zlib.decompress
+
+    PICKLER = pickle.Pickler
+    UNPICKLER = pickle.Unpickler
+    PICKLE_PROTOCOL = 0
+
+    def __init__(self, host, dead_retry=None, persistent_load=None,
                  socket_timeout=None, flush_on_reconnect=None):
         self.dead_retry = dead_retry or self.DEAD_RETRY
         self.socket_timeout = socket_timeout or self.SOCKET_TIMEOUT
         self.flush_on_reconnect = flush_on_reconnect or self.FLUSH_ON_RECONNECT
+        self.persistent_load = persistent_load
 
         if isinstance(host, tuple):
             host, self.weight = host
@@ -191,6 +207,49 @@ class Connection(object):
                     'returned 0 length bytes' % (len(buf), rlen))
         self.buffer = buf[rlen:]
         return buf[:rlen]
+
+    def recv_value(self, flags, rlen):
+        rlen += 2  # include \r\n
+        buf = self.recv(rlen)
+        if len(buf) != rlen:
+            raise exc.MemcachedError(
+                "received %d bytes when expecting %d" % (len(buf), rlen))
+
+        if len(buf) == rlen:
+            buf = buf[:-2]  # strip \r\n
+
+        if flags & self.FLAG_COMPRESSED:
+            buf = self.COMPRESSOR(buf)
+            flags &= ~self.FLAG_COMPRESSED
+
+        if flags == 0:
+            # Bare string
+            if six.PY3:
+                val = buf.decode('utf8')
+            else:
+                val = buf
+        elif flags & self.FLAG_INTEGER:
+            val = int(buf)
+        elif flags & self.FLAG_LONG:
+            if six.PY3:
+                val = int(buf)
+            else:
+                val = long(buf)
+        elif flags & self.FLAG_PICKLE:
+            try:
+                file = io.BytesIO(buf)
+                unpickler = self.UNPICKLER(file)
+                if self.persistent_load:
+                    unpickler.persistent_load = self.persistent_load
+                val = unpickler.load()
+            except Exception as e:
+                self.logger.debug('Pickle error: %s\n' % e)
+                return None
+        else:
+            self.logger.debug("unknown flags on get: %x\n" % flags)
+            raise ValueError('Unknown flags on get: %x' % flags)
+
+        return val
 
     def flush(self):
         self.send_one('flush_all')
