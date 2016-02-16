@@ -1090,7 +1090,7 @@ class Client(threading.local):
 
     def __del__(self):
         for conn in self.connections:
-            conn.close_socket()
+            conn.close()
 
     def __repr__(self):
         return '<memcache.Client>'

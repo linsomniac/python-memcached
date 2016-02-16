@@ -77,7 +77,7 @@ class Connection(object):
         self.deaduntil = time.time() + self.dead_retry
         if self.flush_on_reconnect:
             self.flush_on_next_connect = 1
-        self.close_socket()
+        self.close()
 
     def _get_socket(self):
         if self._check_dead():
@@ -104,7 +104,7 @@ class Connection(object):
             self.flush_on_next_connect = 0
         return s
 
-    def close_socket(self):
+    def close(self):
         if self.socket:
             self.socket.close()
             self.socket = None
