@@ -10,10 +10,8 @@
 from __future__ import print_function
 
 import socket
-import sys
 import unittest
 
-sys.path.append('..')
 import memcache
 
 DEBUG = False
@@ -58,7 +56,7 @@ class test_Memcached_Set_Multi(unittest.TestCase):
     def tearDown(self):
         socket.socket = self.old_socket
 
-    def test_Socket_Disconnect(self):
+    def test_socket_disconnect(self):
         mapping = {'foo': 'FOO', 'bar': 'BAR'}
         bad_keys = self.mc.set_multi(mapping)
 
