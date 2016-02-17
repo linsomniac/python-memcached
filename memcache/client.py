@@ -670,68 +670,29 @@ class Client(threading.local):
                 server.mark_dead(msg)
         return notstored
 
-    def _unsafe_get(self, cmd, key, server):
-        try:
-            cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
-            fullcmd = b''.join((cmd_bytes, b' ', key))
-            server.send_one(fullcmd)
-            rkey = flags = rlen = cas_id = None
-
-            if cmd == 'gets':
-                rkey, flags, rlen, cas_id, = \
-                    server.expect_cas_value(raise_exception=True)
-                if rkey and self.cache_cas:
-                    self.cas_ids[rkey] = cas_id
-            else:
-                rkey, flags, rlen, = \
-                    server.expect_value(raise_exception=True)
-
-            if not rkey:
-                return None
-            try:
-                value = server.recv_value(flags, rlen)
-            finally:
-                server.expect(b"END", raise_exception=True)
-        except (exc.MemcachedError, socket.error) as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            server.mark_dead(msg)
-            return None
-
-        return value
-
-    def _get(self, cmd, key):
-        key = utils.encode_key(key)
-        utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
-            return None
-
-        try:
-            return self._unsafe_get(cmd, key, server)
-        except exc.MemcachedConnectionDeadError:
-            # retry once
-            try:
-                if server.connect():
-                    return self._unsafe_get(cmd, key, server)
-                return None
-            except (exc.MemcachedConnectionDeadError, socket.error) as msg:
-                server.mark_dead(msg)
-            return None
-
     def get(self, key):
         '''Retrieves a key from the memcache.
 
         @return: The value or None.
         '''
-        return self._get('get', key)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return None
+        return server._get('get', key)
 
     def gets(self, key):
         '''Retrieves a key from the memcache. Used in conjunction with 'cas'.
 
         @return: The value or None.
         '''
-        return self._get('gets', key)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return None
+        return server._get('gets', key)
 
     def get_multi(self, keys, key_prefix=''):
         '''Retrieves multiple keys from the memcache doing just one query.

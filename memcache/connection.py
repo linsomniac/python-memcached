@@ -407,6 +407,49 @@ class Connection(object):
                 self.mark_dead(msg)
             return 0
 
+    def _unsafe_get(self, cmd, key):
+        try:
+            cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
+            fullcmd = b''.join((cmd_bytes, b' ', key))
+            self.send_one(fullcmd)
+            rkey = flags = rlen = cas_id = None
+
+            if cmd == 'gets':
+                rkey, flags, rlen, cas_id, = \
+                    self.expect_cas_value(raise_exception=True)
+                if rkey and self.cache_cas:
+                    self.cas_ids[rkey] = cas_id
+            else:
+                rkey, flags, rlen, = \
+                    self.expect_value(raise_exception=True)
+
+            if not rkey:
+                return None
+            try:
+                value = self.recv_value(flags, rlen)
+            finally:
+                self.expect(b"END", raise_exception=True)
+        except (exc.MemcachedError, socket.error) as msg:
+            if isinstance(msg, tuple):
+                msg = msg[1]
+            self.mark_dead(msg)
+            return None
+
+        return value
+
+    def _get(self, cmd, key):
+        try:
+            return self._unsafe_get(cmd, key)
+        except exc.MemcachedConnectionDeadError:
+            # retry once
+            try:
+                if self.connect():
+                    return self._unsafe_get(cmd, key)
+                return None
+            except (exc.MemcachedConnectionDeadError, socket.error) as msg:
+                self.mark_dead(msg)
+            return None
+
 
 class ConnectionPool(object):
     CONNECTION = Connection
