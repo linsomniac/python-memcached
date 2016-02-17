@@ -194,7 +194,7 @@ class Client(threading.local):
         @rtype: int
         """
 
-        server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
+        server_keys, prefixed_to_orig_key = self._map_connection(
             keys, key_prefix)
 
         # send out all requests on each server before reading anything
@@ -486,7 +486,7 @@ class Client(threading.local):
             return 0
         return server._set("cas", key, val, time, min_compress_len, noreply)
 
-    def _map_and_prefix_keys(self, key_iterable, key_prefix):
+    def _map_connection(self, key_iterable, key_prefix):
         '''Compute the mapping of server.
 
         (connection.Connection instance) -> list of keys to stuff onto
@@ -613,7 +613,7 @@ class Client(threading.local):
 
         @rtype: list
         '''
-        server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
+        server_keys, prefixed_to_orig_key = self._map_connection(
             six.iterkeys(mapping), key_prefix)
 
         # send out all requests on each server before reading anything
@@ -748,7 +748,7 @@ class Client(threading.local):
         available. If key_prefix was provided, the keys in the retured
         dictionary will not have it present.
         '''
-        server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
+        server_keys, prefixed_to_orig_key = self._map_connection(
             keys, key_prefix)
 
         # send out all requests on each server before reading anything
