@@ -22,7 +22,7 @@ from . import (
 
 
 class Connection(object):
-    DEAD_RETRY = 30  # number of seconds before retrying a dead server
+    DEAD_RETRY = 30  # number of seconds before retrying a dead connection
     SOCKET_TIMEOUT = 3   # number of seconds before sockets timeout
     FLUSH_ON_RECONNECT = False
 

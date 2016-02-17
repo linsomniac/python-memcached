@@ -18,7 +18,7 @@ from . import (
 
 
 class Client(threading.local):
-    """Object representing a pool of memcache servers.
+    """Object representing a pool of memcache connections.
 
     See L{memcache} for an overview.
 
@@ -27,30 +27,30 @@ class Client(threading.local):
         2. A tuple of C{(hashvalue, key)}.  This is useful if you want
         to avoid making this module calculate a hash value.  You may
         prefer, for example, to keep all of a given user's objects on
-        the same memcache server, so you could use the user's unique
+        the same memcache conn, so you could use the user's unique
         id as the hash value.
 
 
-    @group Setup: __init__, set_servers, forget_dead_hosts,
+    @group Setup: __init__, set_connections, forget_dead_hosts,
     disconnect_all, debuglog
     @group Insertion: set, add, replace, set_multi
     @group Retrieval: get, get_multi
     @group Integers: incr, decr
     @group Removal: delete, delete_multi
-    @sort: __init__, set_servers, forget_dead_hosts, disconnect_all,
+    @sort: __init__, set_connections, forget_dead_hosts, disconnect_all,
            debuglog,\ set, set_multi, add, replace, get, get_multi,
            incr, decr, delete, delete_multi
     """
     CONNECTIONS = connection.ConnectionPool
 
-    def __init__(self, servers, debug=False,
+    def __init__(self, connections, debug=False,
                  pload=None, pid=None,
                  dead_retry=None, socket_timeout=None,
                  cache_cas=False, flush_on_reconnect=None):
-        """Create a new Client object with the given list of servers.
+        """Create a new Client object with the given list of connections.
 
-        @param servers: C{servers} is passed to L{set_servers}.
-        @param debug: whether to display error messages when a server
+        @param connections: C{connections} is passed to L{set_connections}.
+        @param debug: whether to display error messages when a conn
         can't be contacted.
         @param pickleProtocol: number to mandate protocol used by
         (c)Pickle.
@@ -64,27 +64,27 @@ class Client(threading.local):
         @param pid: optional persistent_id function to call on pickle
         storing.  Useful for cPickle since subclassing isn't allowed.
         @param dead_retry: number of seconds before retrying a
-        blacklisted server. Default to 30 s.
+        blacklisted conn. Default to 30 s.
         @param socket_timeout: timeout in seconds for all calls to a
-        server. Defaults to 3 seconds.
+        conn. Defaults to 3 seconds.
         @param cache_cas: (default False) If true, cas operations will
         be cached.  WARNING: This cache is not expired internally, if
         you have a long-running process you will need to expire it
         manually via client.reset_cas(), or the cache can grow
         unlimited.
-        @param server_max_key_length: (default MAX_KEY_LENGTH)
-        Data that is larger than this will not be sent to the server.
-        @param server_max_value_length: (default
+        @param conn_max_key_length: (default MAX_KEY_LENGTH)
+        Data that is larger than this will not be sent to the conn.
+        @param conn_max_value_length: (default
         SERVER_MAX_VALUE_LENGTH) Data that is larger than this will
-        not be sent to the server.
+        not be sent to the conn.
         @param flush_on_reconnect: optional flag which prevents a
         scenario that can cause stale data to be read: If there's more
-        than one memcached server and the connection to one is
-        interrupted, keys that mapped to that server will get
-        reassigned to another. If the first server comes back, those
+        than one memcached conn and the connection to one is
+        interrupted, keys that mapped to that conn will get
+        reassigned to another. If the first conn comes back, those
         keys will map to it again. If it still has its data, get()s
         can read stale data that was overwritten on another
-        server. This flag is off by default for backwards
+        conn. This flag is off by default for backwards
         compatibility.
         """
         super(Client, self).__init__()
@@ -108,7 +108,7 @@ class Client(threading.local):
             'cas_ids': self.cas_ids,
         }
         self.connections = self.CONNECTIONS(
-            servers,
+            connections,
             conn_settings,
         )
 
@@ -123,12 +123,12 @@ class Client(threading.local):
         self.cas_ids.clear()
 
     def get_stats(self, stat_args=None):
-        """Get statistics from each of the servers.
+        """Get statistics from each of the connections.
 
         @param stat_args: Additional arguments to pass to the memcache
             "stats" command.
 
-        @return: A list of tuples ( server_identifier,
+        @return: A list of tuples ( conn_identifier,
             stats_dictionary ).  The dictionary contains a number of
             name/value pairs specifying the name of the status field
             and the string value associated with it.  The values are
@@ -148,20 +148,20 @@ class Client(threading.local):
                 s.send_one('stats')
             else:
                 s.send_one('stats ' + stat_args)
-            serverData = {}
-            data.append((name, serverData))
+            connData = {}
+            data.append((name, connData))
             readline = s.readline
             while 1:
                 line = readline()
                 if not line or line.strip() == 'END':
                     break
                 stats = line.split(' ', 2)
-                serverData[stats[1]] = stats[2]
+                connData[stats[1]] = stats[2]
 
         return(data)
 
     def flush_all(self):
-        """Expire all data in memcache servers that are reachable."""
+        """Expire all data in memcache connections that are reachable."""
         for s in self.connections:
             if not s.connect():
                 continue
@@ -188,55 +188,55 @@ class Client(threading.local):
         @param key_prefix: Optional string to prepend to each key when
             sending to memcache.  See docs for L{get_multi} and
             L{set_multi}.
-        @param noreply: optional parameter instructs the server to not send the
+        @param noreply: optional parameter instructs the conn to not send the
             reply.
         @return: 1 if no failure in communication with any memcacheds.
         @rtype: int
         """
 
-        server_keys, prefixed_to_orig_key = self._map_connection(
+        conn_keys, prefixed_to_orig_key = self._map_connection(
             keys, key_prefix)
 
-        # send out all requests on each server before reading anything
-        dead_servers = []
+        # send out all requests on each conn before reading anything
+        dead_connections = []
 
         rc = 1
-        for server in six.iterkeys(server_keys):
+        for conn in six.iterkeys(conn_keys):
             bigcmd = []
             write = bigcmd.append
             if time is not None:
                 headers = str(time)
             else:
                 headers = None
-            for key in server_keys[server]:  # These are mangled keys
+            for key in conn_keys[conn]:  # These are mangled keys
                 cmd = utils.encode_command('delete', key, headers,
                                            noreply, b'\r\n')
                 write(cmd)
             try:
-                server.send(bigcmd)
+                conn.send(bigcmd)
             except socket.error as msg:
                 rc = 0
                 if isinstance(msg, tuple):
                     msg = msg[1]
-                server.mark_dead(msg)
-                dead_servers.append(server)
+                conn.mark_dead(msg)
+                dead_connections.append(conn)
 
         # if noreply, just return
         if noreply:
             return rc
 
-        # if any servers died on the way, don't expect them to respond.
-        for server in dead_servers:
-            del server_keys[server]
+        # if any connections died on the way, don't expect them to respond.
+        for conn in dead_connections:
+            del conn_keys[conn]
 
-        for server, keys in six.iteritems(server_keys):
+        for conn, keys in six.iteritems(conn_keys):
             try:
                 for key in keys:
-                    server.expect(b"DELETED")
+                    conn.expect(b"DELETED")
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
-                server.mark_dead(msg)
+                conn.mark_dead(msg)
                 rc = 0
         return rc
 
@@ -246,17 +246,17 @@ class Client(threading.local):
         @return: Nonzero on success.
         @param time: number of seconds any subsequent set / update commands
         should fail. Defaults to None for no delay.
-        @param noreply: optional parameter instructs the server to not send the
+        @param noreply: optional parameter instructs the conn to not send the
             reply.
         @rtype: int
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return 0
-        return server._deletetouch("delete", key, [b'DELETED', b'NOT_FOUND'],
-                                   time, noreply)
+        return conn._deletetouch("delete", key, [b'DELETED', b'NOT_FOUND'],
+                                 time, noreply)
 
     def touch(self, key, time=0, noreply=False):
         '''Updates the expiration time of a key in memcache.
@@ -267,23 +267,23 @@ class Client(threading.local):
             unix time-since-the-epoch value. See the memcached protocol
             docs section "Storage Commands" for more info on <exptime>. We
             default to 0 == cache forever.
-        @param noreply: optional parameter instructs the server to not send the
+        @param noreply: optional parameter instructs the conn to not send the
             reply.
         @rtype: int
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return 0
-        return server._deletetouch("touch", key, [b'TOUCHED'], time, noreply)
+        return conn._deletetouch("touch", key, [b'TOUCHED'], time, noreply)
 
     def incr(self, key, delta=1, noreply=False):
         """Increment value for C{key} by C{delta}
 
-        Sends a command to the server to atomically increment the
+        Sends a command to the conn to atomically increment the
         value for C{key} by C{delta}, or by 1 if C{delta} is
-        unspecified.  Returns None if C{key} doesn't exist on server,
+        unspecified.  Returns None if C{key} doesn't exist on conn,
         otherwise it returns the new value after incrementing.
 
         Note that the value for C{key} must already exist in the
@@ -297,13 +297,13 @@ class Client(threading.local):
         >>> mc.incr("counter")
         22
 
-        Overflow on server is not checked.  Be aware of values
+        Overflow on conn is not checked.  Be aware of values
         approaching 2**32.  See L{decr}.
 
         @param delta: Integer amount to increment by (should be zero
         or greater).
 
-        @param noreply: optional parameter instructs the server to not send the
+        @param noreply: optional parameter instructs the conn to not send the
         reply.
 
         @return: New value after incrementing, no None for noreply or error.
@@ -311,22 +311,22 @@ class Client(threading.local):
         """
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return
-        return server._incrdecr("incr", key, delta, noreply)
+        return conn._incrdecr("incr", key, delta, noreply)
 
     def decr(self, key, delta=1, noreply=False):
         """Decrement value for C{key} by C{delta}
 
         Like L{incr}, but decrements.  Unlike L{incr}, underflow is
-        checked and new values are capped at 0.  If server value is 1,
+        checked and new values are capped at 0.  If conn value is 1,
         a decrement of 2 returns 0, not -1.
 
         @param delta: Integer amount to decrement by (should be zero
         or greater).
 
-        @param noreply: optional parameter instructs the server to not send the
+        @param noreply: optional parameter instructs the conn to not send the
         reply.
 
         @return: New value after decrementing,  or None for noreply or error.
@@ -334,10 +334,10 @@ class Client(threading.local):
         """
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return
-        return server._incrdecr("decr", key, delta, noreply)
+        return conn._incrdecr("decr", key, delta, noreply)
 
     def add(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Add new key with value.
@@ -350,10 +350,10 @@ class Client(threading.local):
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return 0
-        return server._set("add", key, val, time, min_compress_len, noreply)
+        return conn._set("add", key, val, time, min_compress_len, noreply)
 
     def append(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Append the value to the end of the existing key's value.
@@ -366,10 +366,10 @@ class Client(threading.local):
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return 0
-        return server._set("append", key, val, time, min_compress_len, noreply)
+        return conn._set("append", key, val, time, min_compress_len, noreply)
 
     def prepend(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Prepend the value to the beginning of the existing key's value.
@@ -382,11 +382,11 @@ class Client(threading.local):
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return 0
-        return server._set("prepend", key, val, time, min_compress_len,
-                           noreply)
+        return conn._set("prepend", key, val, time, min_compress_len,
+                         noreply)
 
     def replace(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Replace existing key with value.
@@ -399,20 +399,20 @@ class Client(threading.local):
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return 0
-        return server._set("replace", key, val, time, min_compress_len,
-                           noreply)
+        return conn._set("replace", key, val, time, min_compress_len,
+                         noreply)
 
     def set(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Unconditionally sets a key to a given value in the memcache.
 
         The C{key} can optionally be an tuple, with the first element
-        being the server hash value and the second being the key.  If
+        being the conn hash value and the second being the key.  If
         you want to avoid making this module calculate a hash value.
         You may prefer, for example, to keep all of a given user's
-        objects on the same memcache server, so you could use the
+        objects on the same memcache conn, so you could use the
         user's unique id as the hash value.
 
         @return: Nonzero on success.
@@ -434,15 +434,15 @@ class Client(threading.local):
         compatability, this parameter defaults to 0, indicating don't
         ever try to compress.
 
-        @param noreply: optional parameter instructs the server to not
+        @param noreply: optional parameter instructs the conn to not
         send the reply.
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return 0
-        return server._set("set", key, val, time, min_compress_len, noreply)
+        return conn._set("set", key, val, time, min_compress_len, noreply)
 
     def cas(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Check and set (CAS)
@@ -451,10 +451,10 @@ class Client(threading.local):
         altered since last fetched. (See L{gets}).
 
         The C{key} can optionally be an tuple, with the first element
-        being the server hash value and the second being the key.  If
+        being the conn hash value and the second being the key.  If
         you want to avoid making this module calculate a hash value.
         You may prefer, for example, to keep all of a given user's
-        objects on the same memcache server, so you could use the
+        objects on the same memcache conn, so you could use the
         user's unique id as the hash value.
 
         @return: Nonzero on success.
@@ -476,21 +476,21 @@ class Client(threading.local):
         compatability, this parameter defaults to 0, indicating don't
         ever try to compress.
 
-        @param noreply: optional parameter instructs the server to not
+        @param noreply: optional parameter instructs the conn to not
         send the reply.
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return 0
-        return server._set("cas", key, val, time, min_compress_len, noreply)
+        return conn._set("cas", key, val, time, min_compress_len, noreply)
 
     def _map_connection(self, key_iterable, key_prefix):
-        '''Compute the mapping of server.
+        '''Compute the mapping of conn.
 
         (connection.Connection instance) -> list of keys to stuff onto
-        that server, as well as the mapping of prefixed key -> original key.
+        that conn, as well as the mapping of prefixed key -> original key.
         '''
         key_prefix = utils.encode_key(key_prefix)
         # Check it just once ...
@@ -498,18 +498,18 @@ class Client(threading.local):
         if key_prefix:
             utils.check_key(key_prefix)
 
-        # server (connection.Connection) ->
-        # list of unprefixed server keys in mapping
-        server_keys = {}
+        # conn (connection.Connection) ->
+        # list of unprefixed conn keys in mapping
+        conn_keys = {}
 
         prefixed_to_orig_key = {}
-        # build up a list for each server of all the keys we want.
+        # build up a list for each conn of all the keys we want.
         for orig_key in key_iterable:
             if isinstance(orig_key, tuple):
-                # Tuple of hashvalue, key ala _get_server(). Caller is
-                # essentially telling us what server to stuff this on.
-                # Ensure call to _get_server gets a Tuple as well.
-                serverhash, key = orig_key
+                # Tuple of hashvalue, key ala _get_conn(). Caller is
+                # essentially telling us what conn to stuff this on.
+                # Ensure call to _get_conn gets a Tuple as well.
+                connhash, key = orig_key
 
                 key = utils.encode_key(key)
                 if not isinstance(key, six.binary_type):
@@ -520,9 +520,9 @@ class Client(threading.local):
                 bytes_orig_key = key
 
                 # Gotta pre-mangle key before hashing to a
-                # server. Returns the mangled key.
-                server, key = self.connections.get(
-                    (serverhash, key_prefix + key))
+                # conn. Returns the mangled key.
+                conn, key = self.connections.get(
+                    (connhash, key_prefix + key))
 
                 orig_key = orig_key[1]
             else:
@@ -533,7 +533,7 @@ class Client(threading.local):
                     if six.PY3:
                         key = key.encode('utf8')
                 bytes_orig_key = key
-                server, key = self.connections.get(key_prefix + key)
+                conn, key = self.connections.get(key_prefix + key)
 
             #  alert when passed in key is None
             if orig_key is None:
@@ -542,15 +542,15 @@ class Client(threading.local):
             # Now check to make sure key length is proper ...
             utils.check_key(bytes_orig_key, key_extra_len=key_extra_len)
 
-            if not server:
+            if not conn:
                 continue
 
-            if server not in server_keys:
-                server_keys[server] = []
-            server_keys[server].append(key)
+            if conn not in conn_keys:
+                conn_keys[conn] = []
+            conn_keys[conn].append(key)
             prefixed_to_orig_key[key] = orig_key
 
-        return (server_keys, prefixed_to_orig_key)
+        return (conn_keys, prefixed_to_orig_key)
 
     def set_multi(self, mapping, time=0, key_prefix='', min_compress_len=0,
                   noreply=False):
@@ -605,7 +605,7 @@ class Client(threading.local):
             backwards compatability, this parameter defaults to 0,
             indicating don't ever try to compress.
 
-        @param noreply: optional parameter instructs the server to not
+        @param noreply: optional parameter instructs the conn to not
             send the reply.
 
         @return: List of keys which failed to be stored [ memcache out
@@ -613,19 +613,19 @@ class Client(threading.local):
 
         @rtype: list
         '''
-        server_keys, prefixed_to_orig_key = self._map_connection(
+        conn_keys, prefixed_to_orig_key = self._map_connection(
             six.iterkeys(mapping), key_prefix)
 
-        # send out all requests on each server before reading anything
-        dead_servers = []
+        # send out all requests on each conn before reading anything
+        dead_connections = []
         notstored = []  # original keys.
 
-        for server in six.iterkeys(server_keys):
+        for conn in six.iterkeys(conn_keys):
             bigcmd = []
             write = bigcmd.append
             try:
-                for key in server_keys[server]:  # These are mangled keys
-                    store_info = server.convert_value(
+                for key in conn_keys[conn]:  # These are mangled keys
+                    store_info = conn.convert_value(
                         mapping[prefixed_to_orig_key[key]],
                         min_compress_len)
                     if store_info:
@@ -637,29 +637,29 @@ class Client(threading.local):
                         write(fullcmd)
                     else:
                         notstored.append(prefixed_to_orig_key[key])
-                server.send(bigcmd)
+                conn.send(bigcmd)
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
-                server.mark_dead(msg)
-                dead_servers.append(server)
+                conn.mark_dead(msg)
+                dead_connections.append(conn)
 
         # if noreply, just return early
         if noreply:
             return notstored
 
-        # if any servers died on the way, don't expect them to respond.
-        for server in dead_servers:
-            del server_keys[server]
+        # if any connections died on the way, don't expect them to respond.
+        for conn in dead_connections:
+            del conn_keys[conn]
 
-        #  short-circuit if there are no servers, just return all keys
-        if not server_keys:
+        #  short-circuit if there are no connections, just return all keys
+        if not conn_keys:
             return list(mapping.keys())
 
-        for server, keys in six.iteritems(server_keys):
+        for conn, keys in six.iteritems(conn_keys):
             try:
                 for key in keys:
-                    if server.readline() == b'STORED':
+                    if conn.readline() == b'STORED':
                         continue
                     else:
                         # un-mangle.
@@ -667,7 +667,7 @@ class Client(threading.local):
             except (exc.MemcachedError, socket.error) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
-                server.mark_dead(msg)
+                conn.mark_dead(msg)
         return notstored
 
     def get(self, key):
@@ -677,10 +677,10 @@ class Client(threading.local):
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return None
-        return server._get('get', key)
+        return conn._get('get', key)
 
     def gets(self, key):
         '''Retrieves a key from the memcache. Used in conjunction with 'cas'.
@@ -689,10 +689,10 @@ class Client(threading.local):
         '''
         key = utils.encode_key(key)
         utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
+        conn, key = self.connections.get(key)
+        if not conn:
             return None
-        return server._get('gets', key)
+        return conn._get('gets', key)
 
     def get_multi(self, keys, key_prefix=''):
         '''Retrieves multiple keys from the memcache doing just one query.
@@ -748,41 +748,41 @@ class Client(threading.local):
         available. If key_prefix was provided, the keys in the retured
         dictionary will not have it present.
         '''
-        server_keys, prefixed_to_orig_key = self._map_connection(
+        conn_keys, prefixed_to_orig_key = self._map_connection(
             keys, key_prefix)
 
-        # send out all requests on each server before reading anything
-        dead_servers = []
-        for server in six.iterkeys(server_keys):
+        # send out all requests on each conn before reading anything
+        dead_connections = []
+        for conn in six.iterkeys(conn_keys):
             try:
-                fullcmd = b"get " + b" ".join(server_keys[server])
-                server.send_one(fullcmd)
+                fullcmd = b"get " + b" ".join(conn_keys[conn])
+                conn.send_one(fullcmd)
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
-                server.mark_dead(msg)
-                dead_servers.append(server)
+                conn.mark_dead(msg)
+                dead_connections.append(conn)
 
-        # if any servers died on the way, don't expect them to respond.
-        for server in dead_servers:
-            del server_keys[server]
+        # if any connections died on the way, don't expect them to respond.
+        for conn in dead_connections:
+            del conn_keys[conn]
 
         retvals = {}
-        for server in six.iterkeys(server_keys):
+        for conn in six.iterkeys(conn_keys):
             try:
-                line = server.readline()
+                line = conn.readline()
                 while line and line != b'END':
-                    rkey, flags, rlen = server.expect_value(line)
+                    rkey, flags, rlen = conn.expect_value(line)
                     #  Bo Yang reports that this can sometimes be None
                     if rkey is not None:
-                        val = server.recv_value(flags, rlen)
+                        val = conn.recv_value(flags, rlen)
                         # un-prefix returned key.
                         retvals[prefixed_to_orig_key[rkey]] = val
-                    line = server.readline()
+                    line = conn.readline()
             except (exc.MemcachedError, socket.error) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
-                server.mark_dead(msg)
+                conn.mark_dead(msg)
         return retvals
 
     def __del__(self):
