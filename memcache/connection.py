@@ -20,20 +20,10 @@ from . import (
 )
 
 
-SERVER_MAX_KEY_LENGTH = 250
-# Storing values larger than 1MB requires starting memcached with -I <size> for
-# memcached >= 1.4.2 or recompiling for < 1.4.2.
-
-
 class Connection(object):
     DEAD_RETRY = 30  # number of seconds before retrying a dead server
     SOCKET_TIMEOUT = 3   # number of seconds before sockets timeout
     FLUSH_ON_RECONNECT = False
-
-    FLAG_PICKLE = 1 << 0
-    FLAG_INTEGER = 1 << 1
-    FLAG_LONG = 1 << 2
-    FLAG_COMPRESSED = 1 << 3
 
     COMPRESSOR = zlib.compress
     DECOMPRESSOR = zlib.decompress
@@ -41,8 +31,6 @@ class Connection(object):
     PICKLER = pickle.Pickler
     UNPICKLER = pickle.Unpickler
     PICKLE_PROTOCOL = 0
-
-    MAX_VALUE_LENGTH = 1024 * 1024
 
     def __init__(self, host, dead_retry=None, persistent_load=None,
                  socket_timeout=None, flush_on_reconnect=None,
@@ -316,7 +304,7 @@ class Connection(object):
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
-        if (len(val) > self.MAX_VALUE_LENGTH):
+        if (len(val) > const.MAX_VALUE_LENGTH):
             return(0)
 
         return (flags, len(val), val)

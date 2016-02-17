@@ -4,11 +4,9 @@ from __future__ import (
 )
 
 import logging
-import pickle
 import re
 import socket
 import threading
-import zlib
 
 import six
 
@@ -77,7 +75,7 @@ class Client(threading.local):
         you have a long-running process you will need to expire it
         manually via client.reset_cas(), or the cache can grow
         unlimited.
-        @param server_max_key_length: (default SERVER_MAX_KEY_LENGTH)
+        @param server_max_key_length: (default MAX_KEY_LENGTH)
         Data that is larger than this will not be sent to the server.
         @param server_max_value_length: (default
         SERVER_MAX_VALUE_LENGTH) Data that is larger than this will
@@ -880,7 +878,7 @@ class Client(threading.local):
 
             Fails if:
 
-            Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
+            Key length is > MAX_KEY_LENGTH (Raises MemcachedKeyLength).
             Contains control characters  (Raises MemcachedKeyCharacterError).
             Is not a string (Raises MemcachedStringEncodingError)
             Is an unicode string (Raises MemcachedStringEncodingError)
@@ -901,10 +899,10 @@ class Client(threading.local):
         if not isinstance(key, six.binary_type):
             raise exc.MemcachedKeyTypeError("Key must be a binary string")
 
-        if (const.SERVER_MAX_KEY_LENGTH != 0 and
-                len(key) + key_extra_len > const.SERVER_MAX_KEY_LENGTH):
+        if (const.MAX_KEY_LENGTH != 0 and
+                len(key) + key_extra_len > const.MAX_KEY_LENGTH):
             raise exc.MemcachedKeyLengthError(
-                "Key length is > %s" % const.SERVER_MAX_KEY_LENGTH
+                "Key length is > %s" % const.MAX_KEY_LENGTH
             )
         if not self.REGEX_VALID_KEY.match(key):
             raise exc.MemcachedKeyCharacterError(

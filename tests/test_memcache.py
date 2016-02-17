@@ -10,7 +10,6 @@ from memcache import (
     exc,
 )
 from memcache import Client
-from memcache.connection import Connection
 
 
 class FooStruct(object):
@@ -107,7 +106,7 @@ class TestMemcache(unittest.TestCase):
 
     def test_sending_key_too_long(self):
         try:
-            self.mc.set('a' * const.SERVER_MAX_KEY_LENGTH + 'a', 1)
+            self.mc.set('a' * const.MAX_KEY_LENGTH + 'a', 1)
         except exc.MemcachedKeyLengthError as err:
             self.assertTrue("length is >" in err.args[0])
         else:
@@ -115,8 +114,8 @@ class TestMemcache(unittest.TestCase):
                 "Expected exc.MemcachedKeyLengthError, nothing raised")
 
         # These should work.
-        self.mc.set('a' * const.SERVER_MAX_KEY_LENGTH, 1)
-        self.mc.set('a' * const.SERVER_MAX_KEY_LENGTH, 1, noreply=True)
+        self.mc.set('a' * const.MAX_KEY_LENGTH, 1)
+        self.mc.set('a' * const.MAX_KEY_LENGTH, 1, noreply=True)
 
     def test_setget_boolean(self):
         """GitHub issue #75. Set/get with boolean values."""
@@ -124,7 +123,7 @@ class TestMemcache(unittest.TestCase):
 
     def test_unicode_key(self):
         s = six.u('\u4f1a')
-        maxlen = const.SERVER_MAX_KEY_LENGTH // len(s.encode('utf-8'))
+        maxlen = const.MAX_KEY_LENGTH // len(s.encode('utf-8'))
         key = s * maxlen
 
         self.mc.set(key, 5)
@@ -135,11 +134,11 @@ class TestMemcache(unittest.TestCase):
         # NOTE: "MemCached: while expecting[...]" is normal...
         key = 'keyhere'
 
-        value = 'a' * (Connection.MAX_VALUE_LENGTH // 2)
+        value = 'a' * (const.MAX_VALUE_LENGTH // 2)
         self.assertTrue(self.mc.set(key, value))
         self.assertEqual(self.mc.get(key), value)
 
-        value = 'a' * Connection.MAX_VALUE_LENGTH
+        value = 'a' * const.MAX_VALUE_LENGTH
         self.assertFalse(self.mc.set(key, value))
         # This test fails if the -I option is used on the memcached server
         self.assertTrue(self.mc.get(key) is None)
