@@ -4,9 +4,11 @@ from __future__ import (
 )
 
 import os
+import socket
 import unittest
 
 import six
+import mock
 
 from memcache import (
     const,
@@ -31,8 +33,8 @@ class FooStruct(object):
 class TestMemcache(unittest.TestCase):
     def setUp(self):
         # TODO(Jeremy) unix socket server stuff
-        servers = [os.getenv("MEMCACHED") or "127.0.0.1:11211"]
-        self.mc = Client(servers, debug=1)
+        self.connections = [os.getenv("MEMCACHED") or "127.0.0.1:11211"]
+        self.mc = Client(self.connections, debug=1)
 
     def tearDown(self):
         del self.mc
@@ -71,7 +73,6 @@ class TestMemcache(unittest.TestCase):
 
     def test_get_unknown_value(self):
         self.mc.delete("unknown_value")
-
         self.assertEqual(self.mc.get("unknown_value"), None)
 
     def test_setget_foostruct(self):
@@ -187,6 +188,12 @@ class TestMemcache(unittest.TestCase):
     def test_delete_multi_noreply(self):
         self.mc.set_multi({'a1': 'val1', 'a2': 'val2'})
         self.assertTrue(self.mc.delete_multi(['key1', 'key2'], noreply=True))
+
+    def test_delete_multi_dead_connections(self):
+        mc = Client(self.connections * 2, debug=1)
+        mc.set_multi({'a1': 'val1', 'a2': 'val2'})
+        with mock.patch.object(next(iter(mc.connections)), 'send', side_effect=socket.error):
+            self.assertFalse(mc.delete_multi(['key1', 'key2']))
 
     def test_incr_doctest(self):
         self.mc.set("counter", "20")
