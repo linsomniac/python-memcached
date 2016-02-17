@@ -1,3 +1,5 @@
+import re
+
 MAX_KEY_LENGTH = 250
 MAX_VALUE_LENGTH = 1024 * 1024
 
@@ -5,3 +7,5 @@ FLAG_PICKLE = 1 << 0
 FLAG_INTEGER = 1 << 1
 FLAG_LONG = 1 << 2
 FLAG_COMPRESSED = 1 << 3
+
+REGEX_VALID_KEY = re.compile(b'[\x21-\x7e\x80-\xff]+$')

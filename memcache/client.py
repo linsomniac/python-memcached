@@ -44,7 +44,6 @@ class Client(threading.local):
            incr, decr, delete, delete_multi
     """
     CONNECTIONS = connection.ConnectionPool
-    REGEX_VALID_KEY = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
     def __init__(self, servers, debug=False,
                  pload=None, pid=None,
@@ -904,7 +903,7 @@ class Client(threading.local):
             raise exc.MemcachedKeyLengthError(
                 "Key length is > %s" % const.MAX_KEY_LENGTH
             )
-        if not self.REGEX_VALID_KEY.match(key):
+        if not const.REGEX_VALID_KEY.match(key):
             raise exc.MemcachedKeyCharacterError(
                 "Control/space characters not allowed (key=%r)" % key)
 
