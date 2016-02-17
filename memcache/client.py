@@ -308,7 +308,12 @@ class Client(threading.local):
         @return: New value after incrementing, no None for noreply or error.
         @rtype: int
         """
-        return self._incrdecr("incr", key, delta, noreply)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return
+        return server._incrdecr("incr", key, delta, noreply)
 
     def decr(self, key, delta=1, noreply=False):
         """Decrement value for C{key} by C{delta}
@@ -326,28 +331,12 @@ class Client(threading.local):
         @return: New value after decrementing,  or None for noreply or error.
         @rtype: int
         """
-        return self._incrdecr("decr", key, delta, noreply)
-
-    def _incrdecr(self, cmd, key, delta, noreply=False):
         key = utils.encode_key(key)
         utils.check_key(key)
         server, key = self.connections.get(key)
         if not server:
-            return None
-        fullcmd = utils.encode_command(cmd, key, str(delta), noreply)
-        try:
-            server.send_one(fullcmd)
-            if noreply:
-                return
-            line = server.readline()
-            if line is None or line.strip() == b'NOT_FOUND':
-                return None
-            return int(line)
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            server.mark_dead(msg)
-            return None
+            return
+        return server._incrdecr("decr", key, delta, noreply)
 
     def add(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Add new key with value.

@@ -344,6 +344,22 @@ class Connection(object):
             self.mark_dead(msg)
         return 0
 
+    def _incrdecr(self, cmd, key, delta, noreply=False):
+        fullcmd = utils.encode_command(cmd, key, str(delta), noreply)
+        try:
+            self.send_one(fullcmd)
+            if noreply:
+                return
+            line = self.readline()
+            if line is None or line.strip() == b'NOT_FOUND':
+                return None
+            return int(line)
+        except socket.error as msg:
+            if isinstance(msg, tuple):
+                msg = msg[1]
+            self.mark_dead(msg)
+            return None
+
 
 class ConnectionPool(object):
     CONNECTION = Connection
