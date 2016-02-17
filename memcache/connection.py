@@ -17,6 +17,7 @@ import six
 from . import (
     const,
     exc,
+    utils,
 )
 
 
@@ -320,6 +321,28 @@ class Connection(object):
             return "inet6:[%s]:%d%s" % (self.address[0], self.address[1], d)
         else:
             return "unix:%s%s" % (self.address, d)
+
+    def _deletetouch(self, cmd, key, expected, time=0, noreply=False):
+        if time is not None and time != 0:
+            headers = str(time)
+        else:
+            headers = None
+        fullcmd = utils.encode_command(cmd, key, headers, noreply)
+
+        try:
+            self.send_one(fullcmd)
+            if noreply:
+                return 1
+            line = self.readline()
+            if line and line.strip() in expected:
+                return 1
+            self.logger.debug('%s expected %s, got: %r'
+                              % (cmd, ' or '.join(expected), line))
+        except socket.error as msg:
+            if isinstance(msg, tuple):
+                msg = msg[1]
+            self.mark_dead(msg)
+        return 0
 
 
 class ConnectionPool(object):

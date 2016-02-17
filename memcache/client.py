@@ -91,6 +91,7 @@ class Client(threading.local):
         self.debug = debug
         self.stats = {}
         self.cache_cas = cache_cas
+        self.cas_ids = {}
         self.reset_cas()
 
         self.persistent_load = pload
@@ -118,7 +119,7 @@ class Client(threading.local):
         internally, so it can grow unbounded if you do not clear it
         yourself.
         """
-        self.cas_ids = {}
+        self.cas_ids.clear()
 
     def get_stats(self, stat_args=None):
         """Get statistics from each of the servers.
@@ -248,8 +249,13 @@ class Client(threading.local):
             reply.
         @rtype: int
         '''
-        return self._deletetouch([b'DELETED', b'NOT_FOUND'], "delete", key,
-                                 time, noreply)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return 0
+        return server._deletetouch("delete", key, [b'DELETED', b'NOT_FOUND'],
+                                   time, noreply)
 
     def touch(self, key, time=0, noreply=False):
         '''Updates the expiration time of a key in memcache.
@@ -264,34 +270,12 @@ class Client(threading.local):
             reply.
         @rtype: int
         '''
-        return self._deletetouch([b'TOUCHED'], "touch", key, time, noreply)
-
-    def _deletetouch(self, expected, cmd, key, time=0, noreply=False):
         key = utils.encode_key(key)
         utils.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return 0
-        if time is not None and time != 0:
-            headers = str(time)
-        else:
-            headers = None
-        fullcmd = utils.encode_command(cmd, key, headers, noreply)
-
-        try:
-            server.send_one(fullcmd)
-            if noreply:
-                return 1
-            line = server.readline()
-            if line and line.strip() in expected:
-                return 1
-            self.logger.debug('%s expected %s, got: %r'
-                              % (cmd, ' or '.join(expected), line))
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            server.mark_dead(msg)
-        return 0
+        return server._deletetouch("touch", key, [b'TOUCHED'], time, noreply)
 
     def incr(self, key, delta=1, noreply=False):
         """Increment value for C{key} by C{delta}
