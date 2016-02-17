@@ -184,6 +184,10 @@ class TestMemcache(unittest.TestCase):
         self.assertTrue(self.mc.delete_multi(['key1', 'key2']))
         self.assertEqual(self.mc.get_multi(['key1', 'key2']), {})
 
+    def test_delete_multi_noreply(self):
+        self.mc.set_multi({'a1': 'val1', 'a2': 'val2'})
+        self.assertTrue(self.mc.delete_multi(['key1', 'key2'], noreply=True))
+
     def test_incr_doctest(self):
         self.mc.set("counter", "20")
         self.assertEqual(self.mc.incr("counter"), 21)
