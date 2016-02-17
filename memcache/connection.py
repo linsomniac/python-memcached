@@ -14,7 +14,10 @@ import zlib
 
 import six
 
-from . import exc
+from . import (
+    const,
+    exc,
+)
 
 
 SERVER_MAX_KEY_LENGTH = 250
@@ -227,9 +230,9 @@ class Connection(object):
         if len(buf) == rlen:
             buf = buf[:-2]  # strip \r\n
 
-        if flags & self.FLAG_COMPRESSED:
+        if flags & const.FLAG_COMPRESSED:
             buf = self.COMPRESSOR(buf)
-            flags &= ~self.FLAG_COMPRESSED
+            flags &= ~const.FLAG_COMPRESSED
 
         if flags == 0:
             # Bare string
@@ -237,14 +240,14 @@ class Connection(object):
                 val = buf.decode('utf8')
             else:
                 val = buf
-        elif flags & self.FLAG_INTEGER:
+        elif flags & const.FLAG_INTEGER:
             val = int(buf)
-        elif flags & self.FLAG_LONG:
+        elif flags & const.FLAG_LONG:
             if six.PY3:
                 val = int(buf)
             else:
                 val = long(buf)
-        elif flags & self.FLAG_PICKLE:
+        elif flags & const.FLAG_PICKLE:
             try:
                 file = io.BytesIO(buf)
                 unpickler = self.UNPICKLER(file)
@@ -276,21 +279,21 @@ class Connection(object):
         elif isinstance(val, six.text_type):
             val = val.encode('utf-8')
         elif isinstance(val, int):
-            flags |= self.FLAG_INTEGER
+            flags |= const.FLAG_INTEGER
             val = '%d' % val
             if six.PY3:
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
         elif six.PY2 and isinstance(val, long):
-            flags |= self.FLAG_LONG
+            flags |= const.FLAG_LONG
             val = str(val)
             if six.PY3:
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
         else:
-            flags |= self.FLAG_PICKLE
+            flags |= const.FLAG_PICKLE
             file = io.BytesIO()
             try:
                 pickler = self.PICKLER(file, protocol=self.PICKLE_PROTOCOL)
@@ -309,7 +312,7 @@ class Connection(object):
             # Only retain the result if the compression result is smaller
             # than the original.
             if len(comp_val) < lv:
-                flags |= self.FLAG_COMPRESSED
+                flags |= const.FLAG_COMPRESSED
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
