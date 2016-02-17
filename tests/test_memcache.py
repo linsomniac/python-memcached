@@ -42,6 +42,11 @@ class TestMemcache(unittest.TestCase):
         newval = self.mc.get(key)
         self.assertEqual(newval, val)
 
+    def test_flush_all(self):
+        self.mc.set('k', 'v')
+        self.mc.flush_all()
+        self.assertIsNone(self.mc.get('k'))
+
     def test_get_stats(self):
         self.assertNotEqual(self.mc.get_stats(), [])
 

@@ -160,10 +160,8 @@ class Client(threading.local):
 
     def flush_all(self):
         """Expire all data in memcache connections that are reachable."""
-        for s in self.connections:
-            if not s.connect():
-                continue
-            s.flush()
+        for conn in (c for c in self.connections if c.connect()):
+            conn.flush()
 
     def delete_multi(self, keys, time=0, key_prefix='', noreply=False):
         """Delete multiple keys in the memcache doing just one query.
