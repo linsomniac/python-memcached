@@ -201,6 +201,14 @@ class TestMemcache(unittest.TestCase):
         with mock.patch.object(next(iter(mc.connections)), 'expect', side_effect=socket.error):
             self.assertFalse(mc.delete_multi(['key1', 'key2']))
 
+    def test_add(self):
+        self.mc.set('k', 'v')
+        self.assertFalse(self.mc.add('k', 'v'))
+
+    def test_add_no_server(self):
+        with mock.patch.object(self.mc.connections, 'get', return_value=(None, None)):
+            self.assertEqual(self.mc.add('k', 'v'), 0)
+
     def test_incr_doctest(self):
         self.mc.set("counter", "20")
         self.assertEqual(self.mc.incr("counter"), 21)
