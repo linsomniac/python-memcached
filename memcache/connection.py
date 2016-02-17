@@ -35,12 +35,14 @@ class Connection(object):
 
     def __init__(self, host, dead_retry=None, persistent_load=None,
                  socket_timeout=None, flush_on_reconnect=None,
-                 persistent_id=None):
+                 persistent_id=None, cas_ids=None):
         self.dead_retry = dead_retry or self.DEAD_RETRY
         self.socket_timeout = socket_timeout or self.SOCKET_TIMEOUT
         self.flush_on_reconnect = flush_on_reconnect or self.FLUSH_ON_RECONNECT
+
         self.persistent_load = persistent_load
         self.persistent_id = persistent_id
+        self.cas_ids = cas_ids
 
         if isinstance(host, tuple):
             host, self.weight = host
@@ -359,6 +361,51 @@ class Connection(object):
                 msg = msg[1]
             self.mark_dead(msg)
             return None
+
+    def _unsafe_set(self, cmd, key, val, time, min_compress_len, noreply):
+        if cmd == 'cas' and key not in self.cas_ids:
+            return self._set('set', key, val, time, min_compress_len,
+                             noreply)
+
+        store_info = self.convert_value(val, min_compress_len)
+        if not store_info:
+            return(0)
+        flags, len_val, encoded_val = store_info
+
+        if cmd == 'cas':
+            headers = ("%d %d %d %d"
+                       % (flags, time, len_val, self.cas_ids[key]))
+        else:
+            headers = "%d %d %d" % (flags, time, len_val)
+        fullcmd = utils.encode_command(cmd, key, headers, noreply,
+                                       b'\r\n', encoded_val)
+
+        try:
+            self.send_one(fullcmd)
+            if noreply:
+                return True
+            return(self.expect(b"STORED", raise_exception=True)
+                   == b"STORED")
+        except socket.error as msg:
+            if isinstance(msg, tuple):
+                msg = msg[1]
+            self.mark_dead(msg)
+        return 0
+
+    def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
+        try:
+            return self._unsafe_set(cmd, key, val, time, min_compress_len,
+                                    noreply)
+        except exc.MemcachedConnectionDeadError:
+            # retry once
+            try:
+                if self.connect():
+                    return self._unsafe_set(cmd, key, val, time,
+                                            min_compress_len, noreply,
+                                            self)
+            except (exc.MemcachedConnectionDeadError, socket.error) as msg:
+                self.mark_dead(msg)
+            return 0
 
 
 class ConnectionPool(object):

@@ -105,6 +105,7 @@ class Client(threading.local):
             'dead_retry': dead_retry,
             'socket_timeout': socket_timeout,
             'flush_on_reconnect': flush_on_reconnect,
+            'cas_ids': self.cas_ids,
         }
         self.connections = self.CONNECTIONS(
             servers,
@@ -347,7 +348,12 @@ class Client(threading.local):
         @return: Nonzero on success.
         @rtype: int
         '''
-        return self._set("add", key, val, time, min_compress_len, noreply)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return 0
+        return server._set("add", key, val, time, min_compress_len, noreply)
 
     def append(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Append the value to the end of the existing key's value.
@@ -358,7 +364,12 @@ class Client(threading.local):
         @return: Nonzero on success.
         @rtype: int
         '''
-        return self._set("append", key, val, time, min_compress_len, noreply)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return 0
+        return server._set("append", key, val, time, min_compress_len, noreply)
 
     def prepend(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Prepend the value to the beginning of the existing key's value.
@@ -369,7 +380,13 @@ class Client(threading.local):
         @return: Nonzero on success.
         @rtype: int
         '''
-        return self._set("prepend", key, val, time, min_compress_len, noreply)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return 0
+        return server._set("prepend", key, val, time, min_compress_len,
+                           noreply)
 
     def replace(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Replace existing key with value.
@@ -380,7 +397,13 @@ class Client(threading.local):
         @return: Nonzero on success.
         @rtype: int
         '''
-        return self._set("replace", key, val, time, min_compress_len, noreply)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return 0
+        return server._set("replace", key, val, time, min_compress_len,
+                           noreply)
 
     def set(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Unconditionally sets a key to a given value in the memcache.
@@ -414,7 +437,12 @@ class Client(threading.local):
         @param noreply: optional parameter instructs the server to not
         send the reply.
         '''
-        return self._set("set", key, val, time, min_compress_len, noreply)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return 0
+        return server._set("set", key, val, time, min_compress_len, noreply)
 
     def cas(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Check and set (CAS)
@@ -451,7 +479,12 @@ class Client(threading.local):
         @param noreply: optional parameter instructs the server to not
         send the reply.
         '''
-        return self._set("cas", key, val, time, min_compress_len, noreply)
+        key = utils.encode_key(key)
+        utils.check_key(key)
+        server, key = self.connections.get(key)
+        if not server:
+            return 0
+        return server._set("cas", key, val, time, min_compress_len, noreply)
 
     def _map_and_prefix_keys(self, key_iterable, key_prefix):
         '''Compute the mapping of server.
@@ -636,58 +669,6 @@ class Client(threading.local):
                     msg = msg[1]
                 server.mark_dead(msg)
         return notstored
-
-    def _unsafe_set(self, cmd, key, val, time, min_compress_len,
-                    noreply, server):
-        if cmd == 'cas' and key not in self.cas_ids:
-            return self._set('set', key, val, time, min_compress_len,
-                             noreply)
-
-        store_info = server.convert_value(val, min_compress_len)
-        if not store_info:
-            return(0)
-        flags, len_val, encoded_val = store_info
-
-        if cmd == 'cas':
-            headers = ("%d %d %d %d"
-                       % (flags, time, len_val, self.cas_ids[key]))
-        else:
-            headers = "%d %d %d" % (flags, time, len_val)
-        fullcmd = utils.encode_command(cmd, key, headers, noreply,
-                                       b'\r\n', encoded_val)
-
-        try:
-            server.send_one(fullcmd)
-            if noreply:
-                return True
-            return(server.expect(b"STORED", raise_exception=True)
-                   == b"STORED")
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            server.mark_dead(msg)
-        return 0
-
-    def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
-        key = utils.encode_key(key)
-        utils.check_key(key)
-        server, key = self.connections.get(key)
-        if not server:
-            return 0
-
-        try:
-            return self._unsafe_set(cmd, key, val, time, min_compress_len,
-                                    noreply, server)
-        except exc.MemcachedConnectionDeadError:
-            # retry once
-            try:
-                if server.connect():
-                    return self._unsafe_set(cmd, key, val, time,
-                                            min_compress_len, noreply,
-                                            server)
-            except (exc.MemcachedConnectionDeadError, socket.error) as msg:
-                server.mark_dead(msg)
-            return 0
 
     def _unsafe_get(self, cmd, key, server):
         try:
