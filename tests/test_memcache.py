@@ -42,6 +42,9 @@ class TestMemcache(unittest.TestCase):
         newval = self.mc.get(key)
         self.assertEqual(newval, val)
 
+    def test_get_stats(self):
+        self.assertNotEqual(self.mc.get_stats(), [])
+
     def test_setget(self):
         self.check_setget("a_string", "some random string")
         self.check_setget("a_string_2", "some random string", noreply=True)

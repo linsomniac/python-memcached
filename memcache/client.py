@@ -122,7 +122,7 @@ class Client(threading.local):
         """
         self.cas_ids.clear()
 
-    def get_stats(self, stat_args=None):
+    def get_stats(self, stats_args=None):
         """Get statistics from each of the connections.
 
         @param stat_args: Additional arguments to pass to the memcache
@@ -144,10 +144,8 @@ class Client(threading.local):
                 name = '[%s]:%s (%s)' % (s.ip, s.port, s.weight)
             else:
                 name = 'unix:%s (%s)' % (s.address, s.weight)
-            if not stat_args:
-                s.send_one('stats')
-            else:
-                s.send_one('stats ' + stat_args)
+            stats_args = ' {}'.format(stat_args) if stats_args else ''
+            s.send_one('stats{}'.format(stats_args))
             connData = {}
             data.append((name, connData))
             readline = s.readline
