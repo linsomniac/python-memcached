@@ -324,6 +324,18 @@ class Connection(object):
         else:
             return "unix:%s%s" % (self.address, d)
 
+    def __repr__(self):
+        d = ''
+        if self.deaduntil:
+            d = '<Connection (dead until {})>'.format(self.deaduntil)
+
+        if self.family == socket.AF_INET:
+            return '<Connection inet:{}:{}{}>'.format(self.address[0], self.address[1], d)
+        elif self.family == socket.AF_INET6:
+            return '<Connection inet6:[{}]:{}{}>'.format(self.address[0], self.address[1], d)
+        else:
+            return '<Connection unix:{}{}>'.format(self.address, d)
+
     def _deletetouch(self, cmd, key, expected, time=0, noreply=False):
         if time is not None and time != 0:
             headers = str(time)

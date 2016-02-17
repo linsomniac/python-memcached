@@ -195,6 +195,12 @@ class TestMemcache(unittest.TestCase):
         with mock.patch.object(next(iter(mc.connections)), 'send', side_effect=socket.error):
             self.assertFalse(mc.delete_multi(['key1', 'key2']))
 
+    def test_delete_multi_dead_connections_fail_read(self):
+        mc = Client(self.connections * 2, debug=1)
+        mc.set_multi({'a1': 'val1', 'a2': 'val2'})
+        with mock.patch.object(next(iter(mc.connections)), 'expect', side_effect=socket.error):
+            self.assertFalse(mc.delete_multi(['key1', 'key2']))
+
     def test_incr_doctest(self):
         self.mc.set("counter", "20")
         self.assertEqual(self.mc.incr("counter"), 21)
