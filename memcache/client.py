@@ -4,7 +4,6 @@ from __future__ import (
 )
 
 import logging
-import re
 import socket
 import threading
 
@@ -12,7 +11,6 @@ import six
 
 from . import (
     connection,
-    const,
     exc,
     utils,
 
@@ -270,7 +268,7 @@ class Client(threading.local):
 
     def _deletetouch(self, expected, cmd, key, time=0, noreply=False):
         key = utils.encode_key(key)
-        self.check_key(key)
+        utils.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return 0
@@ -348,7 +346,7 @@ class Client(threading.local):
 
     def _incrdecr(self, cmd, key, delta, noreply=False):
         key = utils.encode_key(key)
-        self.check_key(key)
+        utils.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return None
@@ -492,7 +490,7 @@ class Client(threading.local):
         # Check it just once ...
         key_extra_len = len(key_prefix)
         if key_prefix:
-            self.check_key(key_prefix)
+            utils.check_key(key_prefix)
 
         # server (connection.Connection) ->
         # list of unprefixed server keys in mapping
@@ -533,10 +531,10 @@ class Client(threading.local):
 
             #  alert when passed in key is None
             if orig_key is None:
-                self.check_key(orig_key, key_extra_len=key_extra_len)
+                utils.check_key(orig_key, key_extra_len=key_extra_len)
 
             # Now check to make sure key length is proper ...
-            self.check_key(bytes_orig_key, key_extra_len=key_extra_len)
+            utils.check_key(bytes_orig_key, key_extra_len=key_extra_len)
 
             if not server:
                 continue
@@ -699,7 +697,7 @@ class Client(threading.local):
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
         key = utils.encode_key(key)
-        self.check_key(key)
+        utils.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return 0
@@ -750,7 +748,7 @@ class Client(threading.local):
 
     def _get(self, cmd, key):
         key = utils.encode_key(key)
-        self.check_key(key)
+        utils.check_key(key)
         server, key = self.connections.get(key)
         if not server:
             return None
@@ -871,41 +869,6 @@ class Client(threading.local):
                     msg = msg[1]
                 server.mark_dead(msg)
         return retvals
-
-    def check_key(self, key, key_extra_len=0):
-        """Checks sanity of key.
-
-            Fails if:
-
-            Key length is > MAX_KEY_LENGTH (Raises MemcachedKeyLength).
-            Contains control characters  (Raises MemcachedKeyCharacterError).
-            Is not a string (Raises MemcachedStringEncodingError)
-            Is an unicode string (Raises MemcachedStringEncodingError)
-            Is not a string (Raises exc.MemcachedKeyError)
-            Is None (Raises exc.MemcachedKeyError)
-        """
-        if isinstance(key, tuple):
-            key = key[1]
-        if key is None:
-            raise exc.MemcachedKeyNoneError("Key is None")
-        if key is '':
-            if key_extra_len is 0:
-                raise exc.MemcachedKeyNoneError("Key is empty")
-
-            #  key is empty but there is some other component to key
-            return
-
-        if not isinstance(key, six.binary_type):
-            raise exc.MemcachedKeyTypeError("Key must be a binary string")
-
-        if (const.MAX_KEY_LENGTH != 0 and
-                len(key) + key_extra_len > const.MAX_KEY_LENGTH):
-            raise exc.MemcachedKeyLengthError(
-                "Key length is > %s" % const.MAX_KEY_LENGTH
-            )
-        if not const.REGEX_VALID_KEY.match(key):
-            raise exc.MemcachedKeyCharacterError(
-                "Control/space characters not allowed (key=%r)" % key)
 
     def __del__(self):
         for conn in self.connections:
