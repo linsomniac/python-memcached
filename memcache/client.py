@@ -48,9 +48,7 @@ class Client(threading.local):
     CONNECTIONS = connection.ConnectionPool
     REGEX_VALID_KEY = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
-    def __init__(self, servers, debug=0, pickleProtocol=0,
-                 pickler=pickle.Pickler, unpickler=pickle.Unpickler,
-                 compressor=zlib.compress, decompressor=zlib.decompress,
+    def __init__(self, servers, debug=False,
                  pload=None, pid=None,
                  dead_retry=None, socket_timeout=None,
                  cache_cas=False, flush_on_reconnect=None):
@@ -99,13 +97,6 @@ class Client(threading.local):
         self.stats = {}
         self.cache_cas = cache_cas
         self.reset_cas()
-
-        # Allow users to modify pickling/unpickling behavior
-        self.pickleProtocol = pickleProtocol
-        self.pickler = pickler
-        self.unpickler = unpickler
-        self.compressor = compressor
-        self.decompressor = decompressor
 
         self.persistent_load = pload
         self.persistent_id = pid
