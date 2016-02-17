@@ -51,7 +51,6 @@ from __future__ import (
 __all__ = [
     'Client',
     'exc',
-    'SERVER_MAX_KEY_LENGTH',
 ]
 #  Original author: Evan Martin of Danga Interactive
 __author__ = "Sean Reifschneider <jafo-memcached@tummy.com>"
@@ -62,7 +61,4 @@ __license__ = "Python Software Foundation License"
 
 
 from . import exc
-from .client import (
-    Client,
-    SERVER_MAX_KEY_LENGTH,
-)
+from .client import Client

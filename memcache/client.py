@@ -14,12 +14,11 @@ import six
 
 from . import (
     connection,
+    const,
     exc,
     utils,
 
 )
-
-SERVER_MAX_KEY_LENGTH = 250
 
 
 class Client(threading.local):
@@ -58,7 +57,7 @@ class Client(threading.local):
     def __init__(self, servers, debug=0, pickleProtocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler,
                  compressor=zlib.compress, decompressor=zlib.decompress,
-                 pload=None, pid=None, server_max_key_length=None,
+                 pload=None, pid=None,
                  dead_retry=None, socket_timeout=None,
                  cache_cas=False, flush_on_reconnect=None):
         """Create a new Client object with the given list of servers.
@@ -113,11 +112,9 @@ class Client(threading.local):
         self.unpickler = unpickler
         self.compressor = compressor
         self.decompressor = decompressor
+
         self.persistent_load = pload
         self.persistent_id = pid
-        self.server_max_key_length = server_max_key_length
-        if self.server_max_key_length is None:
-            self.server_max_key_length = SERVER_MAX_KEY_LENGTH
 
         self.logger = logging.getLogger('memcache.client')
 
@@ -919,10 +916,10 @@ class Client(threading.local):
         if not isinstance(key, six.binary_type):
             raise exc.MemcachedKeyTypeError("Key must be a binary string")
 
-        if (self.server_max_key_length != 0 and
-                len(key) + key_extra_len > self.server_max_key_length):
+        if (const.SERVER_MAX_KEY_LENGTH != 0 and
+                len(key) + key_extra_len > const.SERVER_MAX_KEY_LENGTH):
             raise exc.MemcachedKeyLengthError(
-                "Key length is > %s" % self.server_max_key_length
+                "Key length is > %s" % const.SERVER_MAX_KEY_LENGTH
             )
         if not self.REGEX_VALID_KEY.match(key):
             raise exc.MemcachedKeyCharacterError(

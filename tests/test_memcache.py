@@ -5,11 +5,11 @@ import unittest
 
 import six
 
-from memcache import exc
 from memcache import (
-    Client,
-    SERVER_MAX_KEY_LENGTH,
+    const,
+    exc,
 )
+from memcache import Client
 from memcache.connection import Connection
 
 
@@ -107,7 +107,7 @@ class TestMemcache(unittest.TestCase):
 
     def test_sending_key_too_long(self):
         try:
-            self.mc.set('a' * SERVER_MAX_KEY_LENGTH + 'a', 1)
+            self.mc.set('a' * const.SERVER_MAX_KEY_LENGTH + 'a', 1)
         except exc.MemcachedKeyLengthError as err:
             self.assertTrue("length is >" in err.args[0])
         else:
@@ -115,8 +115,8 @@ class TestMemcache(unittest.TestCase):
                 "Expected exc.MemcachedKeyLengthError, nothing raised")
 
         # These should work.
-        self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1)
-        self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1, noreply=True)
+        self.mc.set('a' * const.SERVER_MAX_KEY_LENGTH, 1)
+        self.mc.set('a' * const.SERVER_MAX_KEY_LENGTH, 1, noreply=True)
 
     def test_setget_boolean(self):
         """GitHub issue #75. Set/get with boolean values."""
@@ -124,7 +124,7 @@ class TestMemcache(unittest.TestCase):
 
     def test_unicode_key(self):
         s = six.u('\u4f1a')
-        maxlen = SERVER_MAX_KEY_LENGTH // len(s.encode('utf-8'))
+        maxlen = const.SERVER_MAX_KEY_LENGTH // len(s.encode('utf-8'))
         key = s * maxlen
 
         self.mc.set(key, 5)
