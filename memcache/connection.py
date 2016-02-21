@@ -296,14 +296,13 @@ class Connection(object):
             pickler.dump(val)
             val = file.getvalue()
 
-        lv = len(val)
         # We should try to compress if min_compress_len > 0
         # and this string is longer than our min threshold.
-        if min_compress_len and lv > min_compress_len:
+        if min_compress_len and len(val) > min_compress_len:
             comp_val = self.COMPRESSOR(val)
             # Only retain the result if the compression result is smaller
             # than the original.
-            if len(comp_val) < lv:
+            if len(comp_val) < len(val):
                 flags |= const.FLAG_COMPRESSED
                 val = comp_val
 
