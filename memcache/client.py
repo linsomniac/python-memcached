@@ -144,7 +144,7 @@ class Client(threading.local):
                 name = '[%s]:%s (%s)' % (s.ip, s.port, s.weight)
             else:
                 name = 'unix:%s (%s)' % (s.address, s.weight)
-            stats_args = ' {}'.format(stat_args) if stats_args else ''
+            stats_args = ' {}'.format(stats_args) if stats_args else ''
             s.send_one('stats{}'.format(stats_args))
             connData = {}
             data.append((name, connData))

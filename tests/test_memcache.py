@@ -7,8 +7,8 @@ import os
 import socket
 import unittest
 
-import six
 import mock
+import six
 
 from memcache import (
     const,
@@ -192,13 +192,15 @@ class TestMemcache(unittest.TestCase):
     def test_delete_multi_dead_connections(self):
         mc = Client(self.connections * 2, debug=1)
         mc.set_multi({'a1': 'val1', 'a2': 'val2'})
-        with mock.patch.object(next(iter(mc.connections)), 'send', side_effect=socket.error):
+        conn = next(iter(mc.connections))
+        with mock.patch.object(conn, 'send', side_effect=socket.error):
             self.assertFalse(mc.delete_multi(['key1', 'key2']))
 
     def test_delete_multi_dead_connections_fail_read(self):
         mc = Client(self.connections * 2, debug=1)
         mc.set_multi({'a1': 'val1', 'a2': 'val2'})
-        with mock.patch.object(next(iter(mc.connections)), 'expect', side_effect=socket.error):
+        conn = next(iter(mc.connections))
+        with mock.patch.object(conn, 'expect', side_effect=socket.error):
             self.assertFalse(mc.delete_multi(['key1', 'key2']))
 
     def test_add(self):
@@ -206,7 +208,8 @@ class TestMemcache(unittest.TestCase):
         self.assertFalse(self.mc.add('k', 'v'))
 
     def test_add_no_server(self):
-        with mock.patch.object(self.mc.connections, 'get', return_value=(None, None)):
+        r = (None, None)
+        with mock.patch.object(self.mc.connections, 'get', return_value=r):
             self.assertEqual(self.mc.add('k', 'v'), 0)
 
     def test_incr_doctest(self):

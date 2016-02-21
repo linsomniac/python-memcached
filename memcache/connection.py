@@ -330,9 +330,13 @@ class Connection(object):
             d = '<Connection (dead until {})>'.format(self.deaduntil)
 
         if self.family == socket.AF_INET:
-            return '<Connection inet:{}:{}{}>'.format(self.address[0], self.address[1], d)
+            return '<Connection inet:{}:{}{}>'.format(
+                self.address[0],
+                self.address[1], d)
         elif self.family == socket.AF_INET6:
-            return '<Connection inet6:[{}]:{}{}>'.format(self.address[0], self.address[1], d)
+            return '<Connection inet6:[{}]:{}{}>'.format(
+                self.address[0],
+                self.address[1], d)
         else:
             return '<Connection unix:{}{}>'.format(self.address, d)
 
