@@ -13,6 +13,7 @@ import six
 from memcache import (
     const,
     exc,
+    utils,
 )
 from memcache import Client
 
@@ -241,6 +242,11 @@ class TestMemcache(unittest.TestCase):
                           key_prefix='numkeys_')
         self.assertEqual(self.mc.get_multi([46, 42], key_prefix='numkeys_'),
                          {42: 'douglass adams', 46: 'and 2 just ahead of me'})
+
+    def test_encode_key(self):
+        self.assertEqual(
+            utils.encode_key(('a', u'b')),
+            ('a', b'b'))
 
 
 if __name__ == '__main__':
