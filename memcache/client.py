@@ -636,10 +636,8 @@ class Client(threading.local):
                     else:
                         notstored.append(prefixed_to_orig_key[key])
                 conn.send(bigcmd)
-            except socket.error as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                conn.mark_dead(msg)
+            except socket.error as e:
+                conn.mark_dead(e)
                 dead_connections.append(conn)
 
         # if noreply, just return early
@@ -662,10 +660,8 @@ class Client(threading.local):
                     else:
                         # un-mangle.
                         notstored.append(prefixed_to_orig_key[key])
-            except (exc.MemcachedError, socket.error) as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                conn.mark_dead(msg)
+            except (exc.MemcachedError, socket.error) as e:
+                conn.mark_dead(e)
         return notstored
 
     def get(self, key):
@@ -677,7 +673,7 @@ class Client(threading.local):
         utils.check_key(key)
         conn, key = self.connections.get(key)
         if not conn:
-            return None
+            return 0
         return conn._get('get', key)
 
     def gets(self, key):
@@ -689,7 +685,7 @@ class Client(threading.local):
         utils.check_key(key)
         conn, key = self.connections.get(key)
         if not conn:
-            return None
+            return 0
         return conn._get('gets', key)
 
     def get_multi(self, keys, key_prefix=''):

@@ -208,10 +208,40 @@ class TestMemcache(unittest.TestCase):
         self.mc.set('k', 'v')
         self.assertFalse(self.mc.add('k', 'v'))
 
+    def test_replace(self):
+        self.assertFalse(self.mc.replace('k', 'v'))
+
+    def test_replace_no_server(self):
+        r = (None, None)
+        with mock.patch.object(self.mc.connections, 'get', return_value=r):
+            self.assertEqual(self.mc.replace('k', 'v'), 0)
+
+    def test_cas(self):
+        self.assertTrue(self.mc.cas('k', 'v'))
+
+    def test_cas_no_server(self):
+        r = (None, None)
+        with mock.patch.object(self.mc.connections, 'get', return_value=r):
+            self.assertEqual(self.mc.cas('k', 'v'), 0)
+
+    def test_gets(self):
+        self.assertIsNone(self.mc.gets('k'))
+
+    def test_gets_no_server(self):
+        r = (None, None)
+        with mock.patch.object(self.mc.connections, 'get', return_value=r):
+            self.assertEqual(self.mc.gets('k'), 0)
+
     def test_add_no_server(self):
         r = (None, None)
         with mock.patch.object(self.mc.connections, 'get', return_value=r):
             self.assertEqual(self.mc.add('k', 'v'), 0)
+
+    def test_append_no_server(self):
+        r = (None, None)
+        with mock.patch.object(self.mc.connections, 'get', return_value=r):
+            self.assertEqual(self.mc.append('k', 'v'), 0)
+            self.assertEqual(self.mc.prepend('k', 'v'), 0)
 
     def test_incr_doctest(self):
         self.mc.set("counter", "20")
