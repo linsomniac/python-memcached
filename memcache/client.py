@@ -148,9 +148,8 @@ class Client(threading.local):
             s.send_one('stats{}'.format(stats_args))
             connData = {}
             data.append((name, connData))
-            readline = s.readline
-            while 1:
-                line = readline()
+            while True:
+                line = s.readline()
                 if not line or line.strip() == 'END':
                     break
                 stats = line.split(' ', 2)
