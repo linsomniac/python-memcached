@@ -112,7 +112,8 @@ class Connection(object):
         return s
 
     def mark_dead(self, reason):
-        self.logger.debug("MemCache: %s: %s.  Marking dead." % (self, reason))
+        self.logger.debug(
+            'MemCache: {}: {}.  Marking dead.'.format(self, reason))
         self.deaduntil = time.time() + self.dead_retry
         if self.flush_on_reconnect:
             self.flush_on_next_connect = 1

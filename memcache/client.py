@@ -214,11 +214,9 @@ class Client(threading.local):
                 write(cmd)
             try:
                 conn.send(bigcmd)
-            except socket.error as msg:
+            except socket.error as e:
                 rc = 0
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                conn.mark_dead(msg)
+                conn.mark_dead(e)
                 dead_connections.append(conn)
 
         # if noreply, just return
