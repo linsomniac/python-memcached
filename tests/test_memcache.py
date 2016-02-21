@@ -248,6 +248,25 @@ class TestMemcache(unittest.TestCase):
             utils.encode_key(('a', u'b')),
             ('a', b'b'))
 
+    def test_check_key(self):
+        self.assertIsNone(
+            utils.check_key(('a', b'b')))
+
+    def test_check_key_none(self):
+        with self.assertRaises(exc.MemcachedKeyNoneError):
+            utils.check_key(None)
+
+    def test_check_key_empty_string(self):
+        with self.assertRaises(exc.MemcachedKeyNoneError):
+            utils.check_key(b'')
+
+    def test_check_key_empty_string_extra_component(self):
+        self.assertIsNone(utils.check_key(b'k', 1))
+
+    def test_check_key_binary_string(self):
+        with self.assertRaises(exc.MemcachedKeyTypeError):
+            self.assertIsNone(utils.check_key(0))
+
 
 if __name__ == '__main__':
     unittest.main()

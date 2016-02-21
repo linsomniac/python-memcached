@@ -53,17 +53,19 @@ def check_key(key, key_extra_len=0):
     """
     if isinstance(key, tuple):
         key = key[1]
+
     if key is None:
         raise exc.MemcachedKeyNoneError("Key is None")
-    if key is '':
+
+    if not isinstance(key, six.binary_type):
+        raise exc.MemcachedKeyTypeError("Key must be a binary string")
+
+    if key is b'':
         if key_extra_len is 0:
             raise exc.MemcachedKeyNoneError("Key is empty")
 
         #  key is empty but there is some other component to key
         return
-
-    if not isinstance(key, six.binary_type):
-        raise exc.MemcachedKeyTypeError("Key must be a binary string")
 
     if (const.MAX_KEY_LENGTH != 0 and
             len(key) + key_extra_len > const.MAX_KEY_LENGTH):
@@ -72,4 +74,4 @@ def check_key(key, key_extra_len=0):
         )
     if not const.REGEX_VALID_KEY.match(key):
         raise exc.MemcachedKeyCharacterError(
-            "Control/space characters not allowed (key=%r)" % key)
+            'Control/space characters not allowed: {}'.format(key))
