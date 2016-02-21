@@ -130,6 +130,9 @@ class TestMemcache(unittest.TestCase):
         self.mc.set('a' * const.MAX_KEY_LENGTH, 1)
         self.mc.set('a' * const.MAX_KEY_LENGTH, 1, noreply=True)
 
+    def test_send_too_long_value(self):
+        self.assertEqual(self.mc.set('k', 'a' * const.MAX_VALUE_LENGTH), 0)
+
     def test_setget_boolean(self):
         """GitHub issue #75. Set/get with boolean values."""
         self.check_setget("bool", True)

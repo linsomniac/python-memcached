@@ -96,14 +96,9 @@ class Connection(object):
             s.settimeout(self.socket_timeout)
         try:
             s.connect(self.address)
-        except socket.timeout as msg:
-            self.mark_dead("connect: %s" % msg)
-            return None
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            self.mark_dead("connect: %s" % msg)
-            return None
+        except (socket.error, socket.timeout) as e:
+            self.mark_dead('connect: {}'.format(e))
+            return
         self.socket = s
         self.buffer = b''
         if self.flush_on_next_connect:
@@ -308,7 +303,7 @@ class Connection(object):
 
         #  silently do not store if value length exceeds maximum
         if (len(val) > const.MAX_VALUE_LENGTH):
-            return(0)
+            return 0
 
         return (flags, len(val), val)
 
@@ -356,10 +351,8 @@ class Connection(object):
                 return 1
             self.logger.debug('%s expected %s, got: %r'
                               % (cmd, ' or '.join(expected), line))
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            self.mark_dead(msg)
+        except socket.error as e:
+            self.mark_dead(e)
         return 0
 
     def _incrdecr(self, cmd, key, delta, noreply=False):
@@ -372,10 +365,8 @@ class Connection(object):
             if line is None or line.strip() == b'NOT_FOUND':
                 return None
             return int(line)
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            self.mark_dead(msg)
+        except socket.error as e:
+            self.mark_dead(e)
             return None
 
     def _unsafe_set(self, cmd, key, val, time, min_compress_len, noreply):
@@ -402,10 +393,8 @@ class Connection(object):
                 return True
             return(self.expect(b"STORED", raise_exception=True)
                    == b"STORED")
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            self.mark_dead(msg)
+        except socket.error as e:
+            self.mark_dead(e)
         return 0
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
@@ -419,8 +408,8 @@ class Connection(object):
                     return self._unsafe_set(cmd, key, val, time,
                                             min_compress_len, noreply,
                                             self)
-            except (exc.MemcachedConnectionDeadError, socket.error) as msg:
-                self.mark_dead(msg)
+            except (exc.MemcachedConnectionDeadError, socket.error) as e:
+                self.mark_dead(e)
             return 0
 
     def _unsafe_get(self, cmd, key):
@@ -445,10 +434,8 @@ class Connection(object):
                 value = self.recv_value(flags, rlen)
             finally:
                 self.expect(b"END", raise_exception=True)
-        except (exc.MemcachedError, socket.error) as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            self.mark_dead(msg)
+        except (exc.MemcachedError, socket.error) as e:
+            self.mark_dead(e)
             return None
 
         return value
@@ -462,8 +449,8 @@ class Connection(object):
                 if self.connect():
                     return self._unsafe_get(cmd, key)
                 return None
-            except (exc.MemcachedConnectionDeadError, socket.error) as msg:
-                self.mark_dead(msg)
+            except (exc.MemcachedConnectionDeadError, socket.error) as e:
+                self.mark_dead(e)
             return None
 
 
