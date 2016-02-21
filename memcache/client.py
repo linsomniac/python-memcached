@@ -146,14 +146,14 @@ class Client(threading.local):
                 name = 'unix:%s (%s)' % (s.address, s.weight)
             stats_args = ' {}'.format(stats_args) if stats_args else ''
             s.send_one('stats{}'.format(stats_args))
-            connData = {}
-            data.append((name, connData))
+            conn_data = {}
+            data.append((name, conn_data))
             while True:
                 line = s.readline()
                 if not line or line.strip() == 'END':
                     break
                 stats = line.split(' ', 2)
-                connData[stats[1]] = stats[2]
+                conn_data[stats[1]] = stats[2]
 
         return(data)
 
