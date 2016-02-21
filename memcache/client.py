@@ -150,8 +150,13 @@ class Client(threading.local):
             data.append((name, conn_data))
             while True:
                 line = s.readline()
-                if not line or line.strip() == 'END':
+                if not line:
                     break
+                line = line.decode()
+
+                if line.strip() == 'END':
+                    break
+
                 stats = line.split(' ', 2)
                 conn_data[stats[1]] = stats[2]
 
