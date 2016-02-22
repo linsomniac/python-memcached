@@ -4,7 +4,7 @@ from setuptools import setup  # noqa
 
 
 setup(name="python-memcached",
-      version="1.58",
+      version="2.0.0",
       description="Pure python memcached client",
       long_description=open("README.md").read(),
       author="Evan Martin",
@@ -30,5 +30,4 @@ setup(name="python-memcached",
           "Programming Language :: Python :: 3",
           "Programming Language :: Python :: 3.2",
           "Programming Language :: Python :: 3.3",
-          "Programming Language :: Python :: 3.4"
-          ])
+          "Programming Language :: Python :: 3.4"])
