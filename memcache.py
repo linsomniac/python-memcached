@@ -333,9 +333,9 @@ class Client(threading.local):
             readline = s.readline
             while 1:
                 line = readline()
-                if not line or line.strip() == 'END':
+                if not line or line.decode('ascii').strip() == 'END':
                     break
-                stats = line.split(' ', 2)
+                stats = line.decode('ascii').split(' ', 2)
                 serverData[stats[1]] = stats[2]
 
         return(data)
