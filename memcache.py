@@ -369,7 +369,7 @@ class Client(threading.local):
                     if slab[0] not in serverData:
                         serverData[slab[0]] = {}
                     serverData[slab[0]][slab[1]] = item[2]
-	return data
+        return data
 
     def get_slabs(self):
         data = []
