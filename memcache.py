@@ -49,7 +49,6 @@ from __future__ import print_function
 
 import binascii
 import os
-import pickle
 import re
 import socket
 import sys
@@ -58,6 +57,12 @@ import time
 import zlib
 
 import six
+
+if six.PY2:
+    # With Python 2, the faster C implementation has to be imported explicitly.
+    import cPickle as pickle
+else:
+    import pickle
 
 
 def cmemcache_hash(key):
