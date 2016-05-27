@@ -338,9 +338,9 @@ class Client(threading.local):
             readline = s.readline
             while 1:
                 line = readline()
-                if not line or line.strip() == 'END':
+                if not line or line.strip() == b'END':
                     break
-                stats = line.split(' ', 2)
+                stats = line.split(b' ', 2)
                 serverData[stats[1]] = stats[2]
 
         return(data)
@@ -393,11 +393,11 @@ class Client(threading.local):
             readline = s.readline
             while 1:
                 line = readline()
-                if not line or line.strip() == 'END':
+                if not line or line.strip() == b'END':
                     break
-                item = line.split(' ', 2)
+                item = line.split(b' ', 2)
                 # 0 = STAT, 1 = ITEM, 2 = Value
-                slab = item[1].split(':', 2)
+                slab = item[1].split(b':', 2)
                 # 0 = items, 1 = Slab #, 2 = Name
                 if slab[1] not in serverData:
                     serverData[slab[1]] = {}
