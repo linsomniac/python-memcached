@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: python-memcached
-Version: 1.31
+Version: 1.58
 Summary: A Python memcached client library.
 Home-page: http://www.tummy.com/Community/software/python-memcached/
 Author: Sean Reifschneider

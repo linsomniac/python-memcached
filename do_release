@@ -19,7 +19,6 @@ if [ -f /tmp/python-memcached-"$VERSION".tar.gz ]; then
 	exit 1
 fi
 
-sed -ri 's/^(\s*version=).*$/\1"'"$VERSION"'",/' setup.py
 sed -ri 's/^(\s*__version__\s*=\s*).*$/\1"'"$VERSION"'"/' memcache.py
 sed -ri 's/^(\sVersion:\s*).*$/\1"'"$VERSION"'"/' PKG-INFO
 
