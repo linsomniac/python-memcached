@@ -456,7 +456,7 @@ class Client(threading.local):
         for s in self.servers:
             s.close_socket()
 
-    def delete_multi(self, keys, time=0, key_prefix='', noreply=False):
+    def delete_multi(self, keys, time=None, key_prefix='', noreply=False):
         """Delete multiple keys in the memcache doing just one query.
 
         >>> notset_keys = mc.set_multi({'a1' : 'val1', 'a2' : 'val2'})
@@ -530,7 +530,7 @@ class Client(threading.local):
                 rc = 0
         return rc
 
-    def delete(self, key, time=0, noreply=False):
+    def delete(self, key, time=None, noreply=False):
         '''Deletes a key from the memcache.
 
         @return: Nonzero on success.
@@ -868,7 +868,7 @@ class Client(threading.local):
             sending to memcache. Allows you to efficiently stuff these
             keys into a pseudo-namespace in memcache:
 
-            >>> notset_keys = mc.set_multi(
+            >> notset_keys = mc.set_multi(
             ...     {'key1' : 'val1', 'key2' : 'val2'},
             ...     key_prefix='subspace_')
             >>> len(notset_keys) == 0
