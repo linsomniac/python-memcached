@@ -345,6 +345,37 @@ class Client(threading.local):
 
         return(data)
 
+    def get_slab_stats(self):
+        data = []
+        for s in self.servers:
+            if not s.connect():
+                continue
+            if s.family == socket.AF_INET:
+                name = '%s:%s (%s)' % (s.ip, s.port, s.weight)
+            elif s.family == socket.AF_INET6:
+                name = '[%s]:%s (%s)' % (s.ip, s.port, s.weight)
+            else:
+                name = 'unix:%s (%s)' % (s.address, s.weight)
+            serverData = {}
+            data.append((name, serverData))
+            s.send_cmd('stats slabs')
+            readline = s.readline
+            while 1:
+                line = readline()
+                if not line or line.strip() == 'END':
+                    break
+                item = line.split(' ', 2)
+                if line.startswith('STAT active_slabs') or line.startswith('STAT total_malloced'):
+                    serverData[item[1]]=item[2]
+                else:
+                    # 0 = STAT, 1 = ITEM, 2 = Value
+                    slab = item[1].split(':', 2)
+                    # 0 = Slab #, 1 = Name
+                    if slab[0] not in serverData:
+                        serverData[slab[0]] = {}
+                    serverData[slab[0]][slab[1]] = item[2]
+        return data
+
     def get_slabs(self):
         data = []
         for s in self.servers:
