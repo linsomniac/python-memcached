@@ -1,3 +1,22 @@
+Fri, 27 May 2016 13:44:55 -0600  Sean Reifschneider  <jafo@tummy.com>
+
+   *  1.58 release.
+
+   *  Fixing a performance regression in v1.54 in Python 2, using cPickle again.
+      Patch by edmorley #86
+
+   *  Support for "stats slabs".
+      Patch by grg350 #93
+
+   *  get_stats encoding fix.
+      Patch by bartTC #91
+
+   *  Pin Six version to >= 1.4
+      Patch by pipermirriam #81
+
+   *  setup.py build process pulls version from memcached.py
+      Patch by dieselmachine #72
+
    *  delete() and delete_multi() now default the "time" argument to None,
       since the protocol doesn't allow a time in some implementations.
       Patch by oremj #27
