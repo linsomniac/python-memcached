@@ -1330,6 +1330,9 @@ class Client(threading.local):
                 "Control/space characters not allowed (key=%r)" % key)
 
 
+_host_last_deaduntils = {}
+
+
 class _Host(object):
 
     def __init__(self, host, debug=0, dead_retry=_DEAD_RETRY,
@@ -1371,7 +1374,7 @@ class _Host(object):
             self.port = int(hostData.get('port') or 11211)
             self.address = (self.ip, self.port)
 
-        self.deaduntil = 0
+        self.deaduntil = _host_last_deaduntils.get(self.ip, 0)
         self.socket = None
         self.flush_on_next_connect = 0
 
@@ -1411,6 +1414,7 @@ class _Host(object):
             s.connect(self.address)
         except socket.timeout as msg:
             self.mark_dead("connect: %s" % msg)
+            _host_last_deaduntils[self.ip] = self.deaduntil
             return None
         except socket.error as msg:
             if isinstance(msg, tuple):
