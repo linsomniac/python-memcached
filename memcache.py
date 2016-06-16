@@ -942,7 +942,7 @@ class Client(threading.local):
             return notstored
 
         if not has_valid_content:
-            return notstored
+            return mapping.keys()
 
         # if any servers died on the way, don't expect them to respond.
         for server in dead_servers:
