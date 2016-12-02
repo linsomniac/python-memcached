@@ -567,7 +567,7 @@ class Client(threading.local):
         if not server:
             return 0
         self._statlog(cmd)
-        if time is not None and time != 0:
+        if time is not None:
             headers = str(time)
         else:
             headers = None
