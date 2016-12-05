@@ -176,7 +176,8 @@ class Client(threading.local):
                  pload=None, pid=None,
                  server_max_key_length=None, server_max_value_length=None,
                  dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT,
-                 cache_cas=False, flush_on_reconnect=0, check_keys=True):
+                 cache_cas=False, flush_on_reconnect=0, check_keys=True,
+                 raw_bytes=False):
         """Create a new Client object with the given list of servers.
 
         @param servers: C{servers} is passed to L{set_servers}.
@@ -219,6 +220,8 @@ class Client(threading.local):
         @param check_keys: (default True) If True, the key is checked
         to ensure it is the correct length and composed of the right
         characters.
+        @param raw_bytes: (default False) if True, we return raw
+        bytes instead of trying to decode to Unicode string.
         """
         super(Client, self).__init__()
         self.debug = debug
@@ -230,6 +233,7 @@ class Client(threading.local):
         self.cache_cas = cache_cas
         self.reset_cas()
         self.do_check_key = check_keys
+        self.raw_bytes = raw_bytes
 
         # Allow users to modify pickling/unpickling behavior
         self.pickleProtocol = pickleProtocol
@@ -1267,7 +1271,7 @@ class Client(threading.local):
 
         if flags == 0:
             # Bare string
-            if six.PY3:
+            if not self.raw_bytes and six.PY3:
                 val = buf.decode('utf8')
             else:
                 val = buf
