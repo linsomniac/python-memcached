@@ -69,6 +69,8 @@ def cmemcache_hash(key):
     return (
         (((binascii.crc32(key) & 0xffffffff)
           >> 16) & 0x7fff) or 1)
+
+
 serverHashFunction = cmemcache_hash
 
 
@@ -77,7 +79,9 @@ def useOldServerHashFunction():
     global serverHashFunction
     serverHashFunction = binascii.crc32
 
+
 from io import BytesIO
+
 if six.PY2:
     try:
         unicode
@@ -91,7 +95,6 @@ else:
 _str_cls = six.string_types
 
 valid_key_chars_re = re.compile(b'[\x21-\x7e\x80-\xff]+$')
-
 
 #  Original author: Evan Martin of Danga Interactive
 __author__ = "Sean Reifschneider <jafo-memcached@tummy.com>"
@@ -250,7 +253,7 @@ class Client(threading.local):
         if self.server_max_value_length is None:
             self.server_max_value_length = SERVER_MAX_VALUE_LENGTH
 
-        #  figure out the pickler style
+        # figure out the pickler style
         file = BytesIO()
         try:
             pickler = self.pickler(file, protocol=self.pickleProtocol)
@@ -261,7 +264,7 @@ class Client(threading.local):
     def _encode_key(self, key):
         if isinstance(key, tuple):
             if isinstance(key[1], six.text_type):
-                return (key[0], key[1].encode('utf8'))
+                return key[0], key[1].encode('utf8')
         elif isinstance(key, six.text_type):
             return key.encode('utf8')
         return key
@@ -347,7 +350,7 @@ class Client(threading.local):
                 stats = line.decode('ascii').split(' ', 2)
                 serverData[stats[1]] = stats[2]
 
-        return(data)
+        return data
 
     def get_slab_stats(self):
         data = []
@@ -370,7 +373,7 @@ class Client(threading.local):
                     break
                 item = line.split(' ', 2)
                 if line.startswith('STAT active_slabs') or line.startswith('STAT total_malloced'):
-                    serverData[item[1]]=item[2]
+                    serverData[item[1]] = item[2]
                 else:
                     # 0 = STAT, 1 = ITEM, 2 = Value
                     slab = item[1].split(':', 2)
@@ -827,7 +830,7 @@ class Client(threading.local):
                 bytes_orig_key = key
                 server, key = self._get_server(key_prefix + key)
 
-            #  alert when passed in key is None
+            # alert when passed in key is None
             if orig_key is None:
                 self.check_key(orig_key, key_extra_len=key_extra_len)
 
@@ -843,7 +846,7 @@ class Client(threading.local):
             server_keys[server].append(key)
             prefixed_to_orig_key[key] = orig_key
 
-        return (server_keys, prefixed_to_orig_key)
+        return server_keys, prefixed_to_orig_key
 
     def set_multi(self, mapping, time=0, key_prefix='', min_compress_len=0,
                   noreply=False):
@@ -947,7 +950,7 @@ class Client(threading.local):
         for server in dead_servers:
             del server_keys[server]
 
-        #  short-circuit if there are no servers, just return all keys
+        # short-circuit if there are no servers, just return all keys
         if not server_keys:
             return list(mapping.keys())
 
@@ -1013,12 +1016,12 @@ class Client(threading.local):
                 flags |= Client._FLAG_COMPRESSED
                 val = comp_val
 
-        #  silently do not store if value length exceeds maximum
+        # silently do not store if value length exceeds maximum
         if (self.server_max_value_length != 0 and
-                len(val) > self.server_max_value_length):
-            return(0)
+                    len(val) > self.server_max_value_length):
+            return 0
 
-        return (flags, len(val), val)
+        return flags, len(val), val
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
         key = self._encode_key(key)
@@ -1037,7 +1040,7 @@ class Client(threading.local):
 
             store_info = self._val_to_store_info(val, min_compress_len)
             if not store_info:
-                return(0)
+                return 0
             flags, len_val, encoded_val = store_info
 
             if cmd == 'cas':
@@ -1052,8 +1055,8 @@ class Client(threading.local):
                 server.send_cmd(fullcmd)
                 if noreply:
                     return True
-                return(server.expect(b"STORED", raise_exception=True)
-                       == b"STORED")
+                return (server.expect(b"STORED", raise_exception=True)
+                        == b"STORED")
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -1239,9 +1242,9 @@ class Client(threading.local):
 
         if line and line[:5] == b'VALUE':
             resp, rkey, flags, len, cas_id = line.split()
-            return (rkey, int(flags), int(len), int(cas_id))
+            return rkey, int(flags), int(len), int(cas_id)
         else:
-            return (None, None, None, None)
+            return None, None, None, None
 
     def _expectvalue(self, server, line=None, raise_exception=False):
         if not line:
@@ -1251,9 +1254,9 @@ class Client(threading.local):
             resp, rkey, flags, len = line.split()
             flags = int(flags)
             rlen = int(len)
-            return (rkey, flags, rlen)
+            return rkey, flags, rlen
         else:
-            return (None, None, None)
+            return None, None, None
 
     def _recv_value(self, server, flags, rlen):
         rlen += 2  # include \r\n
@@ -1318,14 +1321,14 @@ class Client(threading.local):
             if key_extra_len is 0:
                 raise Client.MemcachedKeyNoneError("Key is empty")
 
-            #  key is empty but there is some other component to key
+            # key is empty but there is some other component to key
             return
 
         if not isinstance(key, six.binary_type):
             raise Client.MemcachedKeyTypeError("Key must be a binary string")
 
         if (self.server_max_key_length != 0 and
-                len(key) + key_extra_len > self.server_max_key_length):
+                        len(key) + key_extra_len > self.server_max_key_length):
             raise Client.MemcachedKeyLengthError(
                 "Key length is > %s" % self.server_max_key_length
             )
@@ -1335,7 +1338,6 @@ class Client(threading.local):
 
 
 class _Host(object):
-
     def __init__(self, host, debug=0, dead_retry=_DEAD_RETRY,
                  socket_timeout=_SOCKET_TIMEOUT, flush_on_reconnect=0):
         self.dead_retry = dead_retry
@@ -1347,7 +1349,7 @@ class _Host(object):
         else:
             self.weight = 1
 
-        #  parse the connection string
+        # parse the connection string
         m = re.match(r'^(?P<proto>unix):(?P<path>.*)$', host)
         if not m:
             m = re.match(r'^(?P<proto>inet6):'
@@ -1414,13 +1416,21 @@ class _Host(object):
         try:
             s.connect(self.address)
         except socket.timeout as msg:
+            s.close()
+            # print("timeout! %s" % (msg,))
             self.mark_dead("connect: %s" % msg)
             return None
         except socket.error as msg:
+            s.close()
             if isinstance(msg, tuple):
                 msg = msg[1]
+            # print("error! %s" % (msg,))
             self.mark_dead("connect: %s" % msg)
             return None
+        except Exception as e:
+            print("Other error: %s" % (e,))
+            self.debuglog("Other error: %s" % (e,))
+            raise
         self.socket = s
         self.buffer = b''
         if self.flush_on_next_connect:
@@ -1525,6 +1535,5 @@ def _doctest():
     print("Doctests: %s" % (results,))
     if results.failed:
         sys.exit(1)
-
 
 # vim: ts=4 sw=4 et :
