@@ -566,7 +566,7 @@ class Client(threading.local):
         if not server:
             return 0
         self._statlog(cmd)
-        if time is not None and time != 0:
+        if time is not None:
             headers = str(time)
         else:
             headers = None
@@ -580,7 +580,7 @@ class Client(threading.local):
             if line and line.strip() in expected:
                 return 1
             self.debuglog('%s expected %s, got: %r'
-                          % (cmd, ' or '.join(expected), line))
+                          % (cmd, b' or '.join(expected), line))
         except socket.error as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
