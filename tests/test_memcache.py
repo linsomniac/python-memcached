@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import print_function
 
 import unittest
@@ -136,6 +138,14 @@ class TestMemcache(unittest.TestCase):
         self.mc.set(key, 5)
         value = self.mc.get(key)
         self.assertEqual(value, 5)
+
+    def test_unicode_value(self):
+        key = 'key'
+        value = six.u('Iñtërnâtiônàlizætiøn2')
+
+        self.mc.set(key, value)
+        cached_value = self.mc.get(key)
+        self.assertEqual(value, cached_value)
 
     def test_ignore_too_large_value(self):
         # NOTE: "MemCached: while expecting[...]" is normal...
