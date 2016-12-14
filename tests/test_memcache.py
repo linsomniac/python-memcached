@@ -51,6 +51,13 @@ class TestMemcache(unittest.TestCase):
         self.assertEqual(result, True)
         self.assertEqual(self.mc.get("long"), None)
 
+    @mock.patch.object(_Host, 'send_cmd')
+    @mock.patch.object(_Host, 'readline')
+    def test_touch(self, mock_readline, mock_send_cmd):
+        with captured_stderr():
+            self.mc.touch('key')
+        mock_send_cmd.assert_called_with(b'touch key 0')
+
     def test_get_multi(self):
         self.check_setget("gm_a_string", "some random string")
         self.check_setget("gm_an_integer", 42)

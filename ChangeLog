@@ -16,6 +16,8 @@
    * Fixed storing non-ASCII values on Python 2 and binary values on Python 3
      (PR from Nicolas Noé) #135
 
+   * Fixed touch(..., time=0) command (PR from Nicolas Noé) #137
+
 Fri, 27 May 2016 13:44:55 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    *  1.58 release.
