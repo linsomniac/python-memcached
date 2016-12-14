@@ -1273,7 +1273,7 @@ class Client(threading.local):
 
         if flags == 0:
             # Bare bytes
-                val = buf
+            val = buf
         elif flags & Client._FLAG_TEXT:
             val = buf.decode('utf8')
         elif flags & Client._FLAG_INTEGER:

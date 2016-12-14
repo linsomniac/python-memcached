@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from __future__ import print_function
 
 import unittest
@@ -142,7 +141,6 @@ class TestMemcache(unittest.TestCase):
     def test_unicode_value(self):
         key = 'key'
         value = six.u('Iñtërnâtiônàlizætiøn2')
-
         self.mc.set(key, value)
         cached_value = self.mc.get(key)
         self.assertEqual(value, cached_value)
