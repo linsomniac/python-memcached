@@ -729,9 +729,9 @@ class Client(threading.local):
         routine. If the value being cached is a string, then the
         length of the string is measured, else if the value is an
         object, then the length of the pickle result is measured. If
-        the resulting attempt at compression yeilds a larger string
+        the resulting attempt at compression yields a larger string
         than the input, then it is discarded. For backwards
-        compatability, this parameter defaults to 0, indicating don't
+        compatibility, this parameter defaults to 0, indicating don't
         ever try to compress.
 
         @param noreply: optional parameter instructs the server to not
@@ -766,9 +766,9 @@ class Client(threading.local):
         routine. If the value being cached is a string, then the
         length of the string is measured, else if the value is an
         object, then the length of the pickle result is measured. If
-        the resulting attempt at compression yeilds a larger string
+        the resulting attempt at compression yields a larger string
         than the input, then it is discarded. For backwards
-        compatability, this parameter defaults to 0, indicating don't
+        compatibility, this parameter defaults to 0, indicating don't
         ever try to compress.
 
         @param noreply: optional parameter instructs the server to not
@@ -889,9 +889,9 @@ class Client(threading.local):
             routine. If the value being cached is a string, then the
             length of the string is measured, else if the value is an
             object, then the length of the pickle result is
-            measured. If the resulting attempt at compression yeilds a
+            measured. If the resulting attempt at compression yields a
             larger string than the input, then it is discarded. For
-            backwards compatability, this parameter defaults to 0,
+            backwards compatibility, this parameter defaults to 0,
             indicating don't ever try to compress.
 
         @param noreply: optional parameter instructs the server to not
@@ -1186,7 +1186,7 @@ class Client(threading.local):
         prefix.
 
         @return: A dictionary of key/value pairs that were
-        available. If key_prefix was provided, the keys in the retured
+        available. If key_prefix was provided, the keys in the returned
         dictionary will not have it present.
         '''
 
