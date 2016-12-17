@@ -1,3 +1,18 @@
+   *  Added testing for Python 3.5 (PR from Tim Graham) #110
+
+   *  Fixed typos in docstrings (PR from Romuald Brunet, reviewed by Tim
+      Graham) #105
+
+   *  Removing Python 2.6 and 3.2 testing (PR from Tim Graham) #115
+
+   *  Removing unnecessary parens in return statements (PR from Tim Graham)
+      #113
+
+   *  Remove unused _has_unicode/_str_cls vars (PR from Tim Graham) #111
+
+   *  Add flake8 testing and cleanups (PR from Tim Graham, cleanups from Sean
+      Reifschneider) #112
+
 Fri, 27 May 2016 13:44:55 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    *  1.58 release.
