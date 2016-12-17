@@ -135,6 +135,7 @@ class Client(threading.local):
     _FLAG_INTEGER = 1 << 1
     _FLAG_LONG = 1 << 2
     _FLAG_COMPRESSED = 1 << 3
+    _FLAG_TEXT = 1 << 4
 
     _SERVER_RETRIES = 10  # how many times to try finding a free server.
 
@@ -553,7 +554,7 @@ class Client(threading.local):
         if not server:
             return 0
         self._statlog(cmd)
-        if time is not None and time != 0:
+        if time is not None:
             headers = str(time)
         else:
             headers = None
@@ -567,7 +568,7 @@ class Client(threading.local):
             if line and line.strip() in expected:
                 return 1
             self.debuglog('%s expected %s, got: %r'
-                          % (cmd, ' or '.join(expected), line))
+                          % (cmd, b' or '.join(expected), line))
         except socket.error as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
@@ -955,18 +956,23 @@ class Client(threading.local):
         the new value itself.
         """
         flags = 0
-        if isinstance(val, six.binary_type):
+        # Check against the exact type, rather than using isinstance, so that
+        # subclasses of native types (such as markup-safe strings) are pickled
+        # and restored as instances of the correct class.
+        type_ = type(val)
+        if type_ == six.binary_type:
             pass
-        elif isinstance(val, six.text_type):
+        elif type_ == six.text_type:
+            flags |= Client._FLAG_TEXT
             val = val.encode('utf-8')
-        elif isinstance(val, int):
+        elif type_ == int:
             flags |= Client._FLAG_INTEGER
             val = '%d' % val
             if six.PY3:
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
-        elif six.PY2 and isinstance(val, long):
+        elif six.PY2 and type_ == long:
             flags |= Client._FLAG_LONG
             val = str(val)
             if six.PY3:
@@ -1252,11 +1258,10 @@ class Client(threading.local):
             flags &= ~Client._FLAG_COMPRESSED
 
         if flags == 0:
-            # Bare string
-            if six.PY3:
-                val = buf.decode('utf8')
-            else:
+            # Bare bytes
                 val = buf
+        elif flags & Client._FLAG_TEXT:
+            val = buf.decode('utf8')
         elif flags & Client._FLAG_INTEGER:
             val = int(buf)
         elif flags & Client._FLAG_LONG:
