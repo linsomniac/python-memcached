@@ -8,5 +8,7 @@ python:
 services:
   - memcached
 install: python setup.py install
-before_script: pip install nose
-script: nosetests
+before_script: pip install -r test-requirements.txt
+script:
+  - flake8
+  - nosetests

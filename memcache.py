@@ -48,13 +48,13 @@ More detailed documentation is available in the L{Client} class.
 from __future__ import print_function
 
 import binascii
-import os
 import re
 import socket
 import sys
 import threading
 import time
 import zlib
+from io import BytesIO
 
 import six
 
@@ -75,7 +75,6 @@ def useOldServerHashFunction():
     global serverHashFunction
     serverHashFunction = binascii.crc32
 
-from io import BytesIO
 
 valid_key_chars_re = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
@@ -353,7 +352,7 @@ class Client(threading.local):
                     break
                 item = line.split(' ', 2)
                 if line.startswith('STAT active_slabs') or line.startswith('STAT total_malloced'):
-                    serverData[item[1]]=item[2]
+                    serverData[item[1]] = item[2]
                 else:
                     # 0 = STAT, 1 = ITEM, 2 = Value
                     slab = item[1].split(':', 2)
@@ -764,7 +763,8 @@ class Client(threading.local):
         return self._set("cas", key, val, time, min_compress_len, noreply)
 
     def _map_and_prefix_keys(self, key_iterable, key_prefix):
-        """Compute the mapping of server (_Host instance) -> list of keys to
+        """
+        Compute the mapping of server (_Host instance) -> list of keys to
         stuff onto that server, as well as the mapping of prefixed key
         -> original key.
         """
@@ -966,7 +966,7 @@ class Client(threading.local):
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
-        elif six.PY2 and isinstance(val, long):
+        elif six.PY2 and isinstance(val, long):  # noqa: F821
             flags |= Client._FLAG_LONG
             val = str(val)
             if six.PY3:
@@ -1263,7 +1263,7 @@ class Client(threading.local):
             if six.PY3:
                 val = int(buf)
             else:
-                val = long(buf)
+                val = long(buf)  # noqa: F821
         elif flags & Client._FLAG_PICKLE:
             try:
                 file = BytesIO(buf)
