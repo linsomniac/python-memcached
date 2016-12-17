@@ -6,17 +6,6 @@ import six
 
 from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH
 
-try:
-    _str_cls = basestring
-except NameError:
-    _str_cls = str
-
-
-def to_s(val):
-    if not isinstance(val, _str_cls):
-        return "%s (%s)" % (val, type(val))
-    return "%s" % val
-
 
 class FooStruct(object):
 

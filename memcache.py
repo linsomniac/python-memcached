@@ -76,17 +76,6 @@ def useOldServerHashFunction():
     serverHashFunction = binascii.crc32
 
 from io import BytesIO
-if six.PY2:
-    try:
-        unicode
-    except NameError:
-        _has_unicode = False
-    else:
-        _has_unicode = True
-else:
-    _has_unicode = True
-
-_str_cls = six.string_types
 
 valid_key_chars_re = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
