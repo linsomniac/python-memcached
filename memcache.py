@@ -1385,8 +1385,11 @@ class _Host(object):
             sys.stderr.write("MemCached: %s\n" % str)
 
     def _check_dead(self):
-        if self.deaduntil and self.deaduntil > time.time():
-            return 1
+        if self.deaduntil:
+            if self.deaduntil > time.time():
+                return 1
+            else:      
+                _host_last_deaduntils[self.ip] = 0
         self.deaduntil = 0
         return 0
 
