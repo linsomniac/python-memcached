@@ -66,9 +66,7 @@ else:
 
 
 def cmemcache_hash(key):
-    return (
-        (((binascii.crc32(key) & 0xffffffff)
-          >> 16) & 0x7fff) or 1)
+    return (((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1
 serverHashFunction = cmemcache_hash
 
 
@@ -343,7 +341,7 @@ class Client(threading.local):
                 stats = line.decode('ascii').split(' ', 2)
                 serverData[stats[1]] = stats[2]
 
-        return(data)
+        return data
 
     def get_slab_stats(self):
         data = []
@@ -1012,7 +1010,7 @@ class Client(threading.local):
         #  silently do not store if value length exceeds maximum
         if (self.server_max_value_length != 0 and
                 len(val) > self.server_max_value_length):
-            return(0)
+            return 0
 
         return (flags, len(val), val)
 
@@ -1033,7 +1031,7 @@ class Client(threading.local):
 
             store_info = self._val_to_store_info(val, min_compress_len)
             if not store_info:
-                return(0)
+                return 0
             flags, len_val, encoded_val = store_info
 
             if cmd == 'cas':
@@ -1048,8 +1046,7 @@ class Client(threading.local):
                 server.send_cmd(fullcmd)
                 if noreply:
                     return True
-                return(server.expect(b"STORED", raise_exception=True)
-                       == b"STORED")
+                return server.expect(b"STORED", raise_exception=True) == b"STORED"
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
