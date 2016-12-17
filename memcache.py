@@ -48,13 +48,13 @@ More detailed documentation is available in the L{Client} class.
 from __future__ import print_function
 
 import binascii
+from io import BytesIO
 import re
 import socket
 import sys
 import threading
 import time
 import zlib
-from io import BytesIO
 
 import six
 
@@ -763,7 +763,8 @@ class Client(threading.local):
         return self._set("cas", key, val, time, min_compress_len, noreply)
 
     def _map_and_prefix_keys(self, key_iterable, key_prefix):
-        """
+        """Map keys to the servers they will reside on.
+
         Compute the mapping of server (_Host instance) -> list of keys to
         stuff onto that server, as well as the mapping of prefixed key
         -> original key.

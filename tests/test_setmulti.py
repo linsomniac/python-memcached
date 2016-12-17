@@ -14,7 +14,7 @@ import sys
 import unittest
 
 sys.path.append('..')
-import memcache
+import memcache    # noqa: E402
 
 DEBUG = False
 
