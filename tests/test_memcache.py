@@ -5,18 +5,9 @@ import unittest
 
 import six
 
-from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH
+import time
 
-try:
-    _str_cls = basestring
-except NameError:
-    _str_cls = str
-
-
-def to_s(val):
-    if not isinstance(val, _str_cls):
-        return "%s (%s)" % (val, type(val))
-    return "%s" % val
+from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 
 
 class FooStruct(object):
@@ -35,7 +26,7 @@ class FooStruct(object):
 
 class TestMemcache(unittest.TestCase):
     def setUp(self):
-        # TODO: unix socket server stuff
+        # TODO(): unix socket server stuff
         servers = ["127.0.0.1:11211"]
         self.mc = Client(servers, debug=1)
 
@@ -58,6 +49,34 @@ class TestMemcache(unittest.TestCase):
         result = self.mc.delete("long")
         self.assertEqual(result, True)
         self.assertEqual(self.mc.get("long"), None)
+
+        # Delete with explicit time=0 (can re-set immediately)
+        self.mc.set("my_key", "my_val")
+        self.mc.delete("my_key", time=0)
+        self.assertNotEqual(self.mc.set("my_key", "my_val"), 0)
+
+    def test_touch(self):
+        # Basic operation
+        self.mc.set("my_key", "my_val", time=1)
+        self.mc.touch("my_key", time=3)
+        time.sleep(2)
+        self.assertEqual(self.mc.get("my_key"), "my_val")  # It's been prolonged...
+        time.sleep(2)
+        self.assertEqual(self.mc.get("my_key"), None)  # But finally expires
+
+        # Default time
+        self.mc.set("my_key2", "my_val", time=1)
+        self.mc.touch("my_key2")
+        time.sleep(2)
+        self.assertEqual(self.mc.get("my_key2"), "my_val")
+        # TODO: test it stays forever
+
+        # Return values
+        self.mc.set("my_key3", "my_val")
+        result = self.mc.touch("my_key3")
+        self.assertNotEqual(result, 0)  # Returns nonzero on success
+        result = self.mc.touch("inexisting_key")
+        self.assertEqual(result, 0)
 
     def test_get_multi(self):
         self.check_setget("gm_a_string", "some random string")
@@ -141,6 +160,7 @@ class TestMemcache(unittest.TestCase):
     def test_unicode_value(self):
         key = 'key'
         value = six.u('Iñtërnâtiônàlizætiøn2')
+
         self.mc.set(key, value)
         cached_value = self.mc.get(key)
         self.assertEqual(value, cached_value)
