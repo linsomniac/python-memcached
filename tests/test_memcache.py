@@ -71,7 +71,6 @@ class TestMemcache(unittest.TestCase):
         self.mc.touch("my_key2")
         time.sleep(2)
         self.assertEqual(self.mc.get("my_key2"), "my_val")
-        # TODO: test it stays forever
 
         # Return values
         self.mc.set("my_key3", "my_val")
