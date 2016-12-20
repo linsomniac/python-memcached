@@ -244,9 +244,9 @@ class Client(threading.local):
     def _encode_key(self, key):
         if isinstance(key, tuple):
             if isinstance(key[1], six.text_type):
-                return (key[0], key[1].encode('utf8'))
+                return (key[0], key[1].encode('utf-8'))
         elif isinstance(key, six.text_type):
-            return key.encode('utf8')
+            return key.encode('utf-8')
         return key
 
     def _encode_cmd(self, cmd, key, headers, noreply, *args):
@@ -793,7 +793,7 @@ class Client(threading.local):
                     # set_multi supports int / long keys.
                     key = str(key)
                     if six.PY3:
-                        key = key.encode('utf8')
+                        key = key.encode('utf-8')
                 bytes_orig_key = key
 
                 # Gotta pre-mangle key before hashing to a
@@ -808,7 +808,7 @@ class Client(threading.local):
                     # set_multi supports int / long keys.
                     key = str(key)
                     if six.PY3:
-                        key = key.encode('utf8')
+                        key = key.encode('utf-8')
                 bytes_orig_key = key
                 server, key = self._get_server(key_prefix + key)
 
@@ -1261,7 +1261,7 @@ class Client(threading.local):
             # Bare bytes
             val = buf
         elif flags & Client._FLAG_TEXT:
-            val = buf.decode('utf8')
+            val = buf.decode('utf-8')
         elif flags & Client._FLAG_INTEGER:
             val = int(buf)
         elif flags & Client._FLAG_LONG:
@@ -1422,13 +1422,13 @@ class _Host(object):
 
     def send_cmd(self, cmd):
         if isinstance(cmd, six.text_type):
-            cmd = cmd.encode('utf8')
+            cmd = cmd.encode('utf-8')
         self.socket.sendall(cmd + b'\r\n')
 
     def send_cmds(self, cmds):
         """cmds already has trailing \r\n's applied."""
         if isinstance(cmds, six.text_type):
-            cmds = cmds.encode('utf8')
+            cmds = cmds.encode('utf-8')
         self.socket.sendall(cmds)
 
     def readline(self, raise_exception=False):
@@ -1464,8 +1464,8 @@ class _Host(object):
         line = self.readline(raise_exception)
         if self.debug and line != text:
             if six.PY3:
-                text = text.decode('utf8')
-                log_line = line.decode('utf8', 'replace')
+                text = text.decode('utf-8')
+                log_line = line.decode('utf-8', 'replace')
             else:
                 log_line = line
             self.debuglog("while expecting %r, got unexpected response %r"
