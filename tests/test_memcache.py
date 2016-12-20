@@ -8,18 +8,7 @@ import six
 
 import time
 
-from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH
-
-try:
-    _str_cls = basestring
-except NameError:
-    _str_cls = str
-
-
-def to_s(val):
-    if not isinstance(val, _str_cls):
-        return "%s (%s)" % (val, type(val))
-    return "%s" % val
+from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 
 
 class FooStruct(object):
@@ -38,7 +27,7 @@ class FooStruct(object):
 
 class TestMemcache(unittest.TestCase):
     def setUp(self):
-        # TODO: unix socket server stuff
+        # TODO(): unix socket server stuff
         servers = ["127.0.0.1:11211"]
         self.mc = Client(servers, debug=1)
 
