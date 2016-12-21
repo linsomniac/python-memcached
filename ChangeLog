@@ -3,7 +3,7 @@
    *  Fixed typos in docstrings (PR from Romuald Brunet, reviewed by Tim
       Graham) #105
 
-   *  Removing Python 2.6 and 3.2 testing (PR from Tim Graham) #115
+   *  Removing Python 2.6, 3.2, and 3.3 testing (PR from Tim Graham) #115, #116
 
    *  Removing unnecessary parens in return statements (PR from Tim Graham)
       #113
