@@ -48,7 +48,7 @@ More detailed documentation is available in the L{Client} class.
 from __future__ import print_function
 
 import binascii
-import os
+from io import BytesIO
 import re
 import socket
 import sys
@@ -66,9 +66,7 @@ else:
 
 
 def cmemcache_hash(key):
-    return (
-        (((binascii.crc32(key) & 0xffffffff)
-          >> 16) & 0x7fff) or 1)
+    return (((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1
 serverHashFunction = cmemcache_hash
 
 
@@ -77,18 +75,6 @@ def useOldServerHashFunction():
     global serverHashFunction
     serverHashFunction = binascii.crc32
 
-from io import BytesIO
-if six.PY2:
-    try:
-        unicode
-    except NameError:
-        _has_unicode = False
-    else:
-        _has_unicode = True
-else:
-    _has_unicode = True
-
-_str_cls = six.string_types
 
 valid_key_chars_re = re.compile(b'[\x21-\x7e\x80-\xff]+$')
 
@@ -343,7 +329,7 @@ class Client(threading.local):
                 stats = line.decode('ascii').split(' ', 2)
                 serverData[stats[1]] = stats[2]
 
-        return(data)
+        return data
 
     def get_slab_stats(self):
         data = []
@@ -366,7 +352,7 @@ class Client(threading.local):
                     break
                 item = line.split(' ', 2)
                 if line.startswith('STAT active_slabs') or line.startswith('STAT total_malloced'):
-                    serverData[item[1]]=item[2]
+                    serverData[item[1]] = item[2]
                 else:
                     # 0 = STAT, 1 = ITEM, 2 = Value
                     slab = item[1].split(':', 2)
@@ -729,9 +715,9 @@ class Client(threading.local):
         routine. If the value being cached is a string, then the
         length of the string is measured, else if the value is an
         object, then the length of the pickle result is measured. If
-        the resulting attempt at compression yeilds a larger string
+        the resulting attempt at compression yields a larger string
         than the input, then it is discarded. For backwards
-        compatability, this parameter defaults to 0, indicating don't
+        compatibility, this parameter defaults to 0, indicating don't
         ever try to compress.
 
         @param noreply: optional parameter instructs the server to not
@@ -766,9 +752,9 @@ class Client(threading.local):
         routine. If the value being cached is a string, then the
         length of the string is measured, else if the value is an
         object, then the length of the pickle result is measured. If
-        the resulting attempt at compression yeilds a larger string
+        the resulting attempt at compression yields a larger string
         than the input, then it is discarded. For backwards
-        compatability, this parameter defaults to 0, indicating don't
+        compatibility, this parameter defaults to 0, indicating don't
         ever try to compress.
 
         @param noreply: optional parameter instructs the server to not
@@ -777,7 +763,9 @@ class Client(threading.local):
         return self._set("cas", key, val, time, min_compress_len, noreply)
 
     def _map_and_prefix_keys(self, key_iterable, key_prefix):
-        """Compute the mapping of server (_Host instance) -> list of keys to
+        """Map keys to the servers they will reside on.
+
+        Compute the mapping of server (_Host instance) -> list of keys to
         stuff onto that server, as well as the mapping of prefixed key
         -> original key.
         """
@@ -889,9 +877,9 @@ class Client(threading.local):
             routine. If the value being cached is a string, then the
             length of the string is measured, else if the value is an
             object, then the length of the pickle result is
-            measured. If the resulting attempt at compression yeilds a
+            measured. If the resulting attempt at compression yields a
             larger string than the input, then it is discarded. For
-            backwards compatability, this parameter defaults to 0,
+            backwards compatibility, this parameter defaults to 0,
             indicating don't ever try to compress.
 
         @param noreply: optional parameter instructs the server to not
@@ -984,7 +972,7 @@ class Client(threading.local):
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
-        elif six.PY2 and isinstance(val, long):
+        elif six.PY2 and isinstance(val, long):  # noqa: F821
             flags |= Client._FLAG_LONG
             val = str(val)
             if six.PY3:
@@ -1017,7 +1005,7 @@ class Client(threading.local):
         #  silently do not store if value length exceeds maximum
         if (self.server_max_value_length != 0 and
                 len(val) > self.server_max_value_length):
-            return(0)
+            return 0
 
         return (flags, len(val), val)
 
@@ -1038,7 +1026,7 @@ class Client(threading.local):
 
             store_info = self._val_to_store_info(val, min_compress_len)
             if not store_info:
-                return(0)
+                return 0
             flags, len_val, encoded_val = store_info
 
             if cmd == 'cas':
@@ -1053,8 +1041,7 @@ class Client(threading.local):
                 server.send_cmd(fullcmd)
                 if noreply:
                     return True
-                return(server.expect(b"STORED", raise_exception=True)
-                       == b"STORED")
+                return server.expect(b"STORED", raise_exception=True) == b"STORED"
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -1191,7 +1178,7 @@ class Client(threading.local):
         prefix.
 
         @return: A dictionary of key/value pairs that were
-        available. If key_prefix was provided, the keys in the retured
+        available. If key_prefix was provided, the keys in the returned
         dictionary will not have it present.
         '''
 
@@ -1282,7 +1269,7 @@ class Client(threading.local):
             if six.PY3:
                 val = int(buf)
             else:
-                val = long(buf)
+                val = long(buf)  # noqa: F821
         elif flags & Client._FLAG_PICKLE:
             try:
                 file = BytesIO(buf)
