@@ -1317,6 +1317,41 @@ class Client(threading.local):
                 "Control/space characters not allowed (key=%r)" % key)
 
 
+class oldClient(Client):
+    def check_key(self, key, key_extra_len=0):
+        """Checks sanity of key.  Fails if:
+            Key length is > SERVER_MAX_KEY_LENGTH (Raises MemcachedKeyLength).
+            Contains control characters  (Raises MemcachedKeyCharacterError).
+            Is not a string (Raises MemcachedStringEncodingError)
+            Is an unicode string (Raises MemcachedStringEncodingError)
+            Is not a string (Raises MemcachedKeyError)
+            Is None (Raises MemcachedKeyError)
+        """
+        if isinstance(key, tuple): key = key[1]
+        if not key:
+            raise Client.MemcachedKeyNoneError("Key is None")
+        if isinstance(key, unicode):
+            raise Client.MemcachedStringEncodingError(
+                    "Keys must be str()'s, not unicode.  Convert your unicode "
+                    "strings using mystring.encode(charset)!")
+        if not isinstance(key, str):
+            raise Client.MemcachedKeyTypeError("Key must be str()'s")
+
+        if isinstance(key, basestring):
+            if self.server_max_key_length != 0 and \
+                len(key) + key_extra_len > self.server_max_key_length:
+                raise Client.MemcachedKeyLengthError("Key length is > %s"
+                         % self.server_max_key_length)
+            for char in key:
+                if ord(char) < 33 or ord(char) == 127:
+                    raise Client.MemcachedKeyCharacterError(
+                            "Control characters not allowed")
+
+if sys.version_info[:2] < (2, 6):
+    Client = oldClient
+
+
+
 class _Host(object):
 
     def __init__(self, host, debug=0, dead_retry=_DEAD_RETRY,
