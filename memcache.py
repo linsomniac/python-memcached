@@ -1048,7 +1048,7 @@ class Client(threading.local):
         except _ConnectionDeadError:
             # retry once
             try:
-                if server._get_socket():
+                if server._get_socket(reconnect=True):
                     return _unsafe_set()
             except (_ConnectionDeadError, socket.error) as msg:
                 server.mark_dead(msg)
@@ -1101,7 +1101,7 @@ class Client(threading.local):
         except _ConnectionDeadError:
             # retry once
             try:
-                if server.connect():
+                if server._get_socket(reconnect=True):
                     return _unsafe_get()
                 return None
             except (_ConnectionDeadError, socket.error) as msg:
@@ -1386,10 +1386,10 @@ class _Host(object):
             self.flush_on_next_connect = 1
         self.close_socket()
 
-    def _get_socket(self):
+    def _get_socket(self, reconnect=False):
         if self._check_dead():
             return None
-        if self.socket:
+        if self.socket and not reconnect:
             return self.socket
         s = socket.socket(self.family, socket.SOCK_STREAM)
         if hasattr(s, 'settimeout'):
