@@ -162,7 +162,8 @@ class Client(threading.local):
                  pload=None, pid=None,
                  server_max_key_length=None, server_max_value_length=None,
                  dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT,
-                 cache_cas=False, flush_on_reconnect=0, check_keys=True):
+                 cache_cas=False, flush_on_reconnect=0, check_keys=True,
+                 raw_bytes=False):
         """Create a new Client object with the given list of servers.
 
         @param servers: C{servers} is passed to L{set_servers}.
@@ -205,6 +206,8 @@ class Client(threading.local):
         @param check_keys: (default True) If True, the key is checked
         to ensure it is the correct length and composed of the right
         characters.
+        @param raw_bytes: (default False) if True, we return raw
+        bytes instead of trying to decode to Unicode string.
         """
         super(Client, self).__init__()
         self.debug = debug
@@ -216,6 +219,7 @@ class Client(threading.local):
         self.cache_cas = cache_cas
         self.reset_cas()
         self.do_check_key = check_keys
+        self.raw_bytes = raw_bytes
 
         # Allow users to modify pickling/unpickling behavior
         self.pickleProtocol = pickleProtocol
@@ -232,7 +236,7 @@ class Client(threading.local):
         if self.server_max_value_length is None:
             self.server_max_value_length = SERVER_MAX_VALUE_LENGTH
 
-        #  figure out the pickler style
+        # figure out the pickler style
         file = BytesIO()
         try:
             pickler = self.pickler(file, protocol=self.pickleProtocol)
@@ -811,7 +815,7 @@ class Client(threading.local):
                 bytes_orig_key = key
                 server, key = self._get_server(key_prefix + key)
 
-            #  alert when passed in key is None
+            # alert when passed in key is None
             if orig_key is None:
                 self.check_key(orig_key, key_extra_len=key_extra_len)
 
@@ -931,7 +935,7 @@ class Client(threading.local):
         for server in dead_servers:
             del server_keys[server]
 
-        #  short-circuit if there are no servers, just return all keys
+        # short-circuit if there are no servers, just return all keys
         if not server_keys:
             return list(mapping.keys())
 
@@ -997,9 +1001,9 @@ class Client(threading.local):
                 flags |= Client._FLAG_COMPRESSED
                 val = comp_val
 
-        #  silently do not store if value length exceeds maximum
-        if (self.server_max_value_length != 0 and
-                len(val) > self.server_max_value_length):
+        # silently do not store if value length exceeds maximum
+        if ((self.server_max_value_length != 0
+             and len(val) > self.server_max_value_length)):
             return 0
 
         return (flags, len(val), val)
@@ -1254,7 +1258,7 @@ class Client(threading.local):
 
         if flags == 0:
             # Bare string
-            if six.PY3:
+            if not self.raw_bytes and six.PY3:
                 val = buf.decode('utf8')
             else:
                 val = buf
@@ -1301,14 +1305,14 @@ class Client(threading.local):
             if key_extra_len is 0:
                 raise Client.MemcachedKeyNoneError("Key is empty")
 
-            #  key is empty but there is some other component to key
+            # key is empty but there is some other component to key
             return
 
         if not isinstance(key, six.binary_type):
             raise Client.MemcachedKeyTypeError("Key must be a binary string")
 
-        if (self.server_max_key_length != 0 and
-                len(key) + key_extra_len > self.server_max_key_length):
+        if ((self.server_max_key_length != 0
+             and len(key) + key_extra_len > self.server_max_key_length)):
             raise Client.MemcachedKeyLengthError(
                 "Key length is > %s" % self.server_max_key_length
             )
@@ -1330,7 +1334,7 @@ class _Host(object):
         else:
             self.weight = 1
 
-        #  parse the connection string
+        # parse the connection string
         m = re.match(r'^(?P<proto>unix):(?P<path>.*)$', host)
         if not m:
             m = re.match(r'^(?P<proto>inet6):'
@@ -1397,13 +1401,19 @@ class _Host(object):
         try:
             s.connect(self.address)
         except socket.timeout as msg:
+            s.close()
             self.mark_dead("connect: %s" % msg)
             return None
         except socket.error as msg:
+            s.close()
             if isinstance(msg, tuple):
                 msg = msg[1]
             self.mark_dead("connect: %s" % msg)
             return None
+        except Exception as e:
+            # print("Other error: %s" % (e,))
+            self.debuglog("Other error: %s" % (e,))
+            raise
         self.socket = s
         self.buffer = b''
         if self.flush_on_next_connect:
