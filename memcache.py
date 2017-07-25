@@ -1041,8 +1041,8 @@ class Client(threading.local):
                 server.send_cmd(fullcmd)
                 if noreply:
                     return True
-                returnserver.expect(b"STORED", raise_exception=True)
-                       == b"STORED"
+                return (server.expect(b"STORED", raise_exception=True)
+                        == b"STORED")
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
