@@ -1002,8 +1002,8 @@ class Client(threading.local):
                 val = comp_val
 
         # silently do not store if value length exceeds maximum
-        if (self.server_max_value_length != 0 and
-                    len(val) > self.server_max_value_length):
+        if ((self.server_max_value_length != 0
+             and len(val) > self.server_max_value_length)):
             return 0
 
         return (flags, len(val), val)
@@ -1311,8 +1311,8 @@ class Client(threading.local):
         if not isinstance(key, six.binary_type):
             raise Client.MemcachedKeyTypeError("Key must be a binary string")
 
-        if (self.server_max_key_length != 0 and
-                        len(key) + key_extra_len > self.server_max_key_length):
+        if ((self.server_max_key_length != 0
+             and len(key) + key_extra_len > self.server_max_key_length)):
             raise Client.MemcachedKeyLengthError(
                 "Key length is > %s" % self.server_max_key_length
             )
