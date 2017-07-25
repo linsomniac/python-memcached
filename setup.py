@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
-# from setuptools.depends import get_module_constant
+from setuptools.depends import get_module_constant
 from setuptools import setup  # noqa
 
 
 setup(name="python-memcached",
-      # version=get_module_constant('memcache', '__version__'),
-      version='1.58.2',
+      version=get_module_constant('memcache', '__version__'),
       description="Pure python memcached client",
       long_description=open("README.md").read(),
       author="Evan Martin",

@@ -1,3 +1,5 @@
+   *  Added `raw_bytes` option to avoid decoding bytes to str
+
    *  Added testing for Python 3.5 (PR from Tim Graham) #110
 
    *  Fixed typos in docstrings (PR from Romuald Brunet, reviewed by Tim

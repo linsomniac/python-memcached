@@ -66,9 +66,7 @@ else:
 
 
 def cmemcache_hash(key):
-    return (
-        ((binascii.crc32(key) & 0xffffffff)
-          >> 16) & 0x7fff) or 1
+    return (((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1
 serverHashFunction = cmemcache_hash
 
 
@@ -248,7 +246,7 @@ class Client(threading.local):
     def _encode_key(self, key):
         if isinstance(key, tuple):
             if isinstance(key[1], six.text_type):
-                return key[0], key[1].encode('utf8')
+                return (key[0], key[1].encode('utf8'))
         elif isinstance(key, six.text_type):
             return key.encode('utf8')
         return key
@@ -832,7 +830,7 @@ class Client(threading.local):
             server_keys[server].append(key)
             prefixed_to_orig_key[key] = orig_key
 
-        return server_keys, prefixed_to_orig_key
+        return (server_keys, prefixed_to_orig_key)
 
     def set_multi(self, mapping, time=0, key_prefix='', min_compress_len=0,
                   noreply=False):
@@ -1007,7 +1005,7 @@ class Client(threading.local):
                     len(val) > self.server_max_value_length):
             return 0
 
-        return flags, len(val), val
+        return (flags, len(val), val)
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
         key = self._encode_key(key)
@@ -1041,8 +1039,7 @@ class Client(threading.local):
                 server.send_cmd(fullcmd)
                 if noreply:
                     return True
-                return (server.expect(b"STORED", raise_exception=True)
-                        == b"STORED")
+                return server.expect(b"STORED", raise_exception=True) == b"STORED"
             except socket.error as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -1228,9 +1225,9 @@ class Client(threading.local):
 
         if line and line[:5] == b'VALUE':
             resp, rkey, flags, len, cas_id = line.split()
-            return rkey, int(flags), int(len), int(cas_id)
+            return (rkey, int(flags), int(len), int(cas_id))
         else:
-            return None, None, None, None
+            return (None, None, None, None)
 
     def _expectvalue(self, server, line=None, raise_exception=False):
         if not line:
@@ -1240,9 +1237,9 @@ class Client(threading.local):
             resp, rkey, flags, len = line.split()
             flags = int(flags)
             rlen = int(len)
-            return rkey, flags, rlen
+            return (rkey, flags, rlen)
         else:
-            return None, None, None
+            return (None, None, None)
 
     def _recv_value(self, server, flags, rlen):
         rlen += 2  # include \r\n
@@ -1324,6 +1321,7 @@ class Client(threading.local):
 
 
 class _Host(object):
+
     def __init__(self, host, debug=0, dead_retry=_DEAD_RETRY,
                  socket_timeout=_SOCKET_TIMEOUT, flush_on_reconnect=0):
         self.dead_retry = dead_retry
@@ -1403,18 +1401,16 @@ class _Host(object):
             s.connect(self.address)
         except socket.timeout as msg:
             s.close()
-            # print("timeout! %s" % (msg,))
             self.mark_dead("connect: %s" % msg)
             return None
         except socket.error as msg:
             s.close()
             if isinstance(msg, tuple):
                 msg = msg[1]
-            # print("error! %s" % (msg,))
             self.mark_dead("connect: %s" % msg)
             return None
         except Exception as e:
-            print("Other error: %s" % (e,))
+            # print("Other error: %s" % (e,))
             self.debuglog("Other error: %s" % (e,))
             raise
         self.socket = s
@@ -1521,5 +1517,6 @@ def _doctest():
     print("Doctests: %s" % (results,))
     if results.failed:
         sys.exit(1)
+
 
 # vim: ts=4 sw=4 et :
