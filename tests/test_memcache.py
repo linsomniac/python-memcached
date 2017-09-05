@@ -2,9 +2,10 @@ from __future__ import print_function
 
 import unittest
 
+import mock
 import six
 
-from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
+from memcache import Client, _Host, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 from .utils import captured_stderr
 
 
@@ -181,6 +182,17 @@ class TestMemcache(unittest.TestCase):
             "'NOT_FOUND'\n"
             "MemCached: while expecting 'DELETED', got unexpected response "
             "'NOT_FOUND'\n"
+        )
+
+    @mock.patch.object(_Host, 'readline')
+    def test_touch_unexpected_reply(self, mock_readline):
+        """touch() logs an error upon receiving an unexpected reply."""
+        mock_readline.return_value = 'SET'  # the unexpected reply
+        with captured_stderr() as output:
+            self.mc.touch('key')
+        self.assertEqual(
+            output.getvalue(),
+            "MemCached: touch expected %s, got: 'SET'\n" % b'TOUCHED'
         )
 
 
