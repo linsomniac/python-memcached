@@ -488,13 +488,10 @@ class Client(threading.local):
             for key in server_keys[server]:  # These are mangled keys
                 cmd = self._encode_cmd('delete', key, headers, noreply, b'\r\n')
                 write(cmd)
-            try:
+            with _socket_guard(server, (socket.error,)) as sg:
                 server.send_cmds(b''.join(bigcmd))
-            except socket.error as msg:
+            if sg.interrupted:
                 rc = 0
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
                 dead_servers.append(server)
 
         # if noreply, just return
@@ -506,13 +503,10 @@ class Client(threading.local):
             del server_keys[server]
 
         for server, keys in six.iteritems(server_keys):
-            try:
+            with _socket_guard(server, (socket.error,)) as sg:
                 for key in keys:
                     server.expect(b"DELETED")
-            except socket.error as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
+            if sg.interrupted:
                 rc = 0
         return rc
 
@@ -558,7 +552,7 @@ class Client(threading.local):
             headers = None
         fullcmd = self._encode_cmd(cmd, key, headers, noreply)
 
-        try:
+        with _socket_guard(server, (socket.error,)):
             server.send_cmd(fullcmd)
             if noreply:
                 return 1
@@ -567,10 +561,6 @@ class Client(threading.local):
                 return 1
             self.debuglog('%s expected %s, got: %r'
                           % (cmd, ' or '.join(expected), line))
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            server.mark_dead(msg)
         return 0
 
     def incr(self, key, delta=1, noreply=False):
@@ -633,7 +623,7 @@ class Client(threading.local):
             return None
         self._statlog(cmd)
         fullcmd = self._encode_cmd(cmd, key, str(delta), noreply)
-        try:
+        with _socket_guard(server, (socket.error,)):
             server.send_cmd(fullcmd)
             if noreply:
                 return
@@ -641,11 +631,6 @@ class Client(threading.local):
             if line is None or line.strip() == b'NOT_FOUND':
                 return None
             return int(line)
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            server.mark_dead(msg)
-            return None
 
     def add(self, key, val, time=0, min_compress_len=0, noreply=False):
         '''Add new key with value.
@@ -902,7 +887,7 @@ class Client(threading.local):
         for server in six.iterkeys(server_keys):
             bigcmd = []
             write = bigcmd.append
-            try:
+            with _socket_guard(server, (socket.error,)) as sg:
                 for key in server_keys[server]:  # These are mangled keys
                     store_info = self._val_to_store_info(
                         mapping[prefixed_to_orig_key[key]],
@@ -917,10 +902,7 @@ class Client(threading.local):
                     else:
                         notstored.append(prefixed_to_orig_key[key])
                 server.send_cmds(b''.join(bigcmd))
-            except socket.error as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
+            if sg.interrupted:
                 dead_servers.append(server)
 
         # if noreply, just return early
@@ -936,17 +918,13 @@ class Client(threading.local):
             return list(mapping.keys())
 
         for server, keys in six.iteritems(server_keys):
-            try:
+            with _socket_guard(server, (_Error, socket.error)):
                 for key in keys:
                     if server.readline() == b'STORED':
                         continue
                     else:
                         # un-mangle.
                         notstored.append(prefixed_to_orig_key[key])
-            except (_Error, socket.error) as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
         return notstored
 
     def _val_to_store_info(self, val, min_compress_len):
@@ -1032,15 +1010,11 @@ class Client(threading.local):
             fullcmd = self._encode_cmd(cmd, key, headers, noreply,
                                        b'\r\n', encoded_val)
 
-            try:
+            with _socket_guard(server, (socket.error,)):
                 server.send_cmd(fullcmd)
                 if noreply:
                     return True
                 return server.expect(b"STORED", raise_exception=True) == b"STORED"
-            except socket.error as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
             return 0
 
         try:
@@ -1065,7 +1039,7 @@ class Client(threading.local):
         def _unsafe_get():
             self._statlog(cmd)
 
-            try:
+            with _socket_guard(server, (_Error, socket.error)):
                 cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
                 fullcmd = b''.join((cmd_bytes, b' ', key))
                 server.send_cmd(fullcmd)
@@ -1085,16 +1059,9 @@ class Client(threading.local):
                 if not rkey:
                     return None
                 try:
-                    value = self._recv_value(server, flags, rlen)
+                    return self._recv_value(server, flags, rlen)
                 finally:
                     server.expect(b"END", raise_exception=True)
-            except (_Error, socket.error) as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
-                return None
-
-            return value
 
         try:
             return _unsafe_get()
@@ -1185,13 +1152,10 @@ class Client(threading.local):
         # send out all requests on each server before reading anything
         dead_servers = []
         for server in six.iterkeys(server_keys):
-            try:
+            with _socket_guard(server, (socket.error,)) as sg:
                 fullcmd = b"get " + b" ".join(server_keys[server])
                 server.send_cmd(fullcmd)
-            except socket.error as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
+            if sg.interrupted:
                 dead_servers.append(server)
 
         # if any servers died on the way, don't expect them to respond.
@@ -1200,7 +1164,7 @@ class Client(threading.local):
 
         retvals = {}
         for server in six.iterkeys(server_keys):
-            try:
+            with _socket_guard(server, (_Error, socket.error)):
                 line = server.readline()
                 while line and line != b'END':
                     rkey, flags, rlen = self._expectvalue(server, line)
@@ -1210,10 +1174,6 @@ class Client(threading.local):
                         # un-prefix returned key.
                         retvals[prefixed_to_orig_key[rkey]] = val
                     line = server.readline()
-            except (_Error, socket.error) as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
-                server.mark_dead(msg)
         return retvals
 
     def _expect_cas_value(self, server, line=None, raise_exception=False):
@@ -1394,15 +1354,10 @@ class _Host(object):
         s = socket.socket(self.family, socket.SOCK_STREAM)
         if hasattr(s, 'settimeout'):
             s.settimeout(self.socket_timeout)
-        try:
+        with _socket_guard(self, (socket.error,),
+                           msg_tmpl='connect: {}') as sg:
             s.connect(self.address)
-        except socket.timeout as msg:
-            self.mark_dead("connect: %s" % msg)
-            return None
-        except socket.error as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
-            self.mark_dead("connect: %s" % msg)
+        if sg.interrupted:
             return None
         self.socket = s
         self.buffer = b''
@@ -1495,6 +1450,30 @@ class _Host(object):
             return "inet6:[%s]:%d%s" % (self.address[0], self.address[1], d)
         else:
             return "unix:%s%s" % (self.address, d)
+
+
+class _socket_guard(object):
+    def __init__(self, server, exceptions, msg_tmpl='{}'):
+        self._server = server
+        self._exceptions = exceptions
+        self._msg_tmpl = msg_tmpl
+        self.interrupted = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, exc_tb):
+        if exc is not None:
+            self.interrupted = True
+
+        if isinstance(exc, self._exceptions):
+            msg = self._msg_tmpl.format(exc)
+            self._server.mark_dead(msg)
+            return True
+        elif exc is not None:
+            self._server.close_socket()
+
+        return False
 
 
 def _doctest():
