@@ -1,12 +1,6 @@
 from __future__ import print_function
 
-from itertools import chain
-import multiprocessing
-import os
-import signal
 import socket
-import sys
-import traceback
 import unittest
 
 import six
@@ -213,70 +207,19 @@ class TestMemcache(unittest.TestCase):
 
     def test_exception_handling(self):
         """Tests closing socket when custom exception raised"""
-        queue = multiprocessing.Queue()
-        process = multiprocessing.Process(target=worker, args=(self.mc, queue))
-        process.start()
-        if queue.get() != 'loop started':
-            raise ValueError(
-                'Expected "loop started" message from the child process'
-            )
+        class CustomException(Exception):
+            pass
 
-        # maximum test duration is 0.5 second
-        num_iters = 50
-        timeout = 0.01
-        for i in range(num_iters):
-            os.kill(process.pid, signal.SIGUSR1)
+        self.mc.set('error', 1)
+        with patch.object(self.mc, '_recv_value',
+                          Mock(side_effect=CustomException('custom error'))):
             try:
-                exc = WorkerError(*queue.get(timeout=timeout))
-                raise exc
-            except six.moves.queue.Empty:
+                self.mc.get('error')
+            except CustomException:
                 pass
-            if not process.is_alive():
-                break
-
-        if process.is_alive():
-            os.kill(process.pid, signal.SIGTERM)
-        process.join()
-
-
-class SignalException(Exception):
-    pass
-
-
-def sighandler(signum, frame):
-    raise SignalException()
-
-
-class WorkerError(Exception):
-    def __init__(self, exc, assert_tb, signal_tb=None):
-        super(WorkerError, self).__init__(
-            ''.join(chain(assert_tb, signal_tb or []))
-        )
-        self.cause = exc
-
-
-def worker(mc, queue):
-    signal.signal(signal.SIGUSR1, sighandler)
-
-    signal_tb = None
-    for i in range(100000):
-        if i == 0:
-            queue.put('loop started')
-        try:
-            k = str(i)
-            mc.set(k, i)
-            # This loop is just to increase chance to get previous value
-            # for clarity
-            for j in range(10):
-                mc.get(str(i-1))
-            res = mc.get(k)
-            assert res == i, 'Expected {} but was {}'.format(i, res)
-        except AssertionError as e:
-            assert_tb = traceback.format_exception(*sys.exc_info())
-            queue.put((e, assert_tb, signal_tb))
-            break
-        except SignalException as e:
-            signal_tb = traceback.format_exception(*sys.exc_info())
+        self.assertIs(self.mc.servers[0].socket, None)
+        self.assertEqual(self.mc.set('error', 2), True)
+        self.assertEqual(self.mc.get('error'), 2)
 
 
 if __name__ == '__main__':
