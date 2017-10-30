@@ -1141,7 +1141,7 @@ class Client(threading.local):
         ...              key_prefix='pfx_') == {'k1' : 1, 'k2' : 2}
         1
 
-        get_mult [ and L{set_multi} ] can take str()-ables like ints /
+        get_multi [ and L{set_multi} ] can take str()-ables like ints /
         longs as keys too. Such as your db pri key fields.  They're
         rotored through str() before being passed off to memcache,
         with or without the use of a key_prefix.  In this mode, the
