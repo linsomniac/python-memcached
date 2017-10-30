@@ -1,4 +1,4 @@
-   *  Added testing for Python 3.5 (PR from Tim Graham) #110
+   *  Added testing for Python 3.5 and 3.6 (PR from Tim Graham) #110, #131
 
    *  Fixed typos in docstrings (PR from Romuald Brunet, reviewed by Tim
       Graham) #105
