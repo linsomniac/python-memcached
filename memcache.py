@@ -834,9 +834,9 @@ class Client(threading.local):
         '''Sets multiple keys in the memcache doing just one query.
 
         >>> notset_keys = mc.set_multi({'key1' : 'val1', 'key2' : 'val2'})
-        >>> mc.get_multi(['key1', 'key2']) == {'key1' : 'val1',
-        ...                                    'key2' : 'val2'}
-        1
+        >>> keys = mc.get_multi(['key1', 'key2'])
+        >>> keys == {'key1': 'val1', 'key2': 'val2'}
+        True
 
 
         This method is recommended over regular L{set} as it lowers
@@ -856,14 +856,13 @@ class Client(threading.local):
             sending to memcache. Allows you to efficiently stuff these
             keys into a pseudo-namespace in memcache:
 
-            >> notset_keys = mc.set_multi(
+            >>> notset_keys = mc.set_multi(
             ...     {'key1' : 'val1', 'key2' : 'val2'},
             ...     key_prefix='subspace_')
             >>> len(notset_keys) == 0
             True
-            >>> mc.get_multi(['subspace_key1',
-            ...               'subspace_key2']) == {'subspace_key1': 'val1',
-            ...                                     'subspace_key2' : 'val2'}
+            >>> keys = mc.get_multi(['subspace_key1', 'subspace_key2'])
+            >>> keys == {'subspace_key1': 'val1', 'subspace_key2': 'val2'}
             True
 
             Causes key 'subspace_key1' and 'subspace_key2' to be
