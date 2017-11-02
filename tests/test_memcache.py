@@ -1,10 +1,10 @@
 from __future__ import print_function
 
+import mock
+import six
 import unittest
 
-import six
-
-from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
+from memcache import Client, _Host, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 
 
 class FooStruct(object):
@@ -165,6 +165,13 @@ class TestMemcache(unittest.TestCase):
         self.mc.disconnect_all()
         ret = self.mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
         self.assertEqual(ret, 1)
+
+    @mock.patch.object(_Host, 'readline')
+    def test_memcached_error_unexpected_reply(self, mock_readline):
+        """Test that the debug log executes properly in error response."""
+        mock_readline.return_value = 'SET'
+        cache_key = ':cache:key:1'
+        self.mc.touch(cache_key)
 
 
 if __name__ == '__main__':
