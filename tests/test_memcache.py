@@ -5,6 +5,7 @@ import unittest
 import six
 
 from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
+from .utils import captured_stderr
 
 
 class FooStruct(object):
@@ -135,7 +136,13 @@ class TestMemcache(unittest.TestCase):
         self.assertEqual(self.mc.get(key), value)
 
         value = 'a' * SERVER_MAX_VALUE_LENGTH
-        self.assertFalse(self.mc.set(key, value))
+        with captured_stderr() as log:
+            self.assertIs(self.mc.set(key, value), False)
+        self.assertEqual(
+            log.getvalue(),
+            "MemCached: while expecting 'STORED', got unexpected response "
+            "'SERVER_ERROR object too large for cache'\n"
+        )
         # This test fails if the -I option is used on the memcached server
         self.assertTrue(self.mc.get(key) is None)
 
@@ -155,16 +162,26 @@ class TestMemcache(unittest.TestCase):
         """Testing set_multi() with no memcacheds running."""
 
         self.mc.disconnect_all()
-        for server in self.mc.servers:
-            server.mark_dead('test')
+        with captured_stderr() as log:
+            for server in self.mc.servers:
+                server.mark_dead('test')
+        self.assertIn('Marking dead.', log.getvalue())
         errors = self.mc.set_multi({'key1': 'a', 'key2': 'b'})
         self.assertEqual(sorted(errors), ['key1', 'key2'])
 
     def test_disconnect_all_delete_multi(self):
         """Testing delete_multi() with no memcacheds running."""
         self.mc.disconnect_all()
-        ret = self.mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
+        with captured_stderr() as output:
+            ret = self.mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
         self.assertEqual(ret, 1)
+        self.assertEqual(
+            output.getvalue(),
+            "MemCached: while expecting 'DELETED', got unexpected response "
+            "'NOT_FOUND'\n"
+            "MemCached: while expecting 'DELETED', got unexpected response "
+            "'NOT_FOUND'\n"
+        )
 
 
 if __name__ == '__main__':

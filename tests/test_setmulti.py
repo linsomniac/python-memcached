@@ -13,6 +13,8 @@ import socket
 import sys
 import unittest
 
+from .utils import captured_stderr
+
 sys.path.append('..')
 import memcache    # noqa: E402
 
@@ -60,10 +62,10 @@ class test_Memcached_Set_Multi(unittest.TestCase):
 
     def test_Socket_Disconnect(self):
         mapping = {'foo': 'FOO', 'bar': 'BAR'}
-        bad_keys = self.mc.set_multi(mapping)
-
+        with captured_stderr() as log:
+            bad_keys = self.mc.set_multi(mapping)
+        self.assertIn('connection closed in readline().', log.getvalue())
         self.assertEqual(sorted(bad_keys), ['bar', 'foo'])
-
         if DEBUG:
             print('set_multi({0!r}) -> {1!r}'.format(mapping, bad_keys))
 
