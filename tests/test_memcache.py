@@ -1,11 +1,15 @@
 from __future__ import print_function
 
+import socket
 import unittest
 
 import six
 
 from memcache import Client, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 from .utils import captured_stderr
+
+from mock import Mock
+from mock import patch
 
 
 class FooStruct(object):
@@ -182,6 +186,57 @@ class TestMemcache(unittest.TestCase):
             "MemCached: while expecting 'DELETED', got unexpected response "
             "'NOT_FOUND'\n"
         )
+
+    def test_socket_error(self):
+        """Tests case when socket.error exception was raised"""
+        self.mc.set('socket.error', 1)
+        server = Mock(
+            # Should we catch secket.error when establishing connection?
+            # connect=Mock(side_effect=socket.error(-1, 'connect error')),
+            send_cmd=Mock(side_effect=socket.error(-1, 'send cmd error')),
+            send_cmds=Mock(side_effect=socket.error(-1, 'send cmds error')),
+            flush=Mock(side_effect=socket.error(-1, 'flush error')),
+        )
+        with patch.object(self.mc, 'servers', [server]), \
+                patch.object(self.mc, 'buckets', [server]):
+            self.assertEqual(self.mc.set('socket.error', 2), 0)
+            self.assertEqual(
+                self.mc.set_multi({'socket.error': 2}),
+                ['socket.error']
+            )
+            self.assertIs(self.mc.incr('socket.error'), None)
+            self.assertIs(self.mc.decr('socket.error'), None)
+            self.assertEqual(self.mc.add('socket.error', 5), 0)
+            self.assertEqual(self.mc.append('socket.error', 9), 0)
+            self.assertEqual(self.mc.prepend('socket.error', 1), 0)
+            self.assertEqual(self.mc.replace('socket.error', 100), 0)
+            self.assertEqual(self.mc.cas('socket.error', 100), 0)
+            self.assertEqual(self.mc.delete('socket.error'), 0)
+            self.assertEqual(self.mc.delete_multi(['socket.error']), 0)
+            self.assertEqual(self.mc.touch('socket.error'), 0)
+            self.assertIs(self.mc.get('socket.error'), None)
+            self.assertIs(self.mc.gets('socket.error'), None)
+            self.assertEqual(self.mc.get_multi(['socket.error']), {})
+            self.assertRaises(socket.error, self.mc.get_stats)
+            self.assertRaises(socket.error, self.mc.get_slab_stats)
+            self.assertRaises(socket.error, self.mc.get_slabs)
+            self.assertRaises(socket.error, self.mc.flush_all)
+
+    def test_exception_handling(self):
+        """Tests closing socket when custom exception raised"""
+        class CustomException(Exception):
+            pass
+
+        self.mc.set('error', 1)
+        with patch.object(self.mc, '_recv_value',
+                          Mock(side_effect=CustomException('custom error'))):
+            try:
+                self.mc.get('error')
+            except CustomException:
+                pass
+        self.assertIs(self.mc.servers[0].socket, None)
+        self.assertEqual(self.mc.set('error', 2), True)
+        self.assertEqual(self.mc.get('error'), 2)
 
 
 if __name__ == '__main__':
