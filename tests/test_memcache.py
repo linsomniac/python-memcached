@@ -5,7 +5,6 @@ import unittest
 import zlib
 
 import mock
-import six
 
 from memcache import Client, _Host, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 from .utils import captured_stderr
@@ -122,7 +121,7 @@ class TestMemcache(unittest.TestCase):
         self.check_setget("bool", True)
 
     def test_unicode_key(self):
-        s = six.u('\u4f1a')
+        s = u'\u4f1a'
         maxlen = SERVER_MAX_KEY_LENGTH // len(s.encode('utf-8'))
         key = s * maxlen
 
