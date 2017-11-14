@@ -201,7 +201,7 @@ class TestMemcache(unittest.TestCase):
         """Testing delete_multi() with no memcacheds running."""
         self.mc.disconnect_all()
         with captured_stderr() as output:
-            ret = self.mc.delete_multi({'keyhere': 'a', 'keythere': 'b'})
+            ret = self.mc.delete_multi(('keyhere', 'keythere'))
         self.assertEqual(ret, 1)
         self.assertEqual(
             output.getvalue(),
