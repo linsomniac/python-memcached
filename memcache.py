@@ -134,6 +134,7 @@ class Client(threading.local):
     _FLAG_INTEGER = 1 << 1
     _FLAG_LONG = 1 << 2
     _FLAG_COMPRESSED = 1 << 3
+    _FLAG_TEXT = 1 << 4
 
     _SERVER_RETRIES = 10  # how many times to try finding a free server.
 
@@ -955,11 +956,16 @@ class Client(threading.local):
         the new value itself.
         """
         flags = 0
-        if isinstance(val, six.binary_type):
+        # Check against the exact type, rather than using isinstance(), so that
+        # subclasses of native types (such as markup-safe strings) are pickled
+        # and restored as instances of the correct class.
+        val_type = type(val)
+        if val_type == six.binary_type:
             pass
-        elif isinstance(val, six.text_type):
+        elif val_type == six.text_type:
+            flags |= Client._FLAG_TEXT
             val = val.encode('utf-8')
-        elif isinstance(val, int):
+        elif val_type == int:
             flags |= Client._FLAG_INTEGER
             val = '%d' % val
             if six.PY3:
@@ -1250,13 +1256,11 @@ class Client(threading.local):
         if flags & Client._FLAG_COMPRESSED:
             buf = self.decompressor(buf)
             flags &= ~Client._FLAG_COMPRESSED
-
         if flags == 0:
-            # Bare string
-            if six.PY3:
-                val = buf.decode('utf8')
-            else:
-                val = buf
+            # Bare bytes
+            val = buf
+        elif flags & Client._FLAG_TEXT:
+            val = buf.decode('utf-8')
         elif flags & Client._FLAG_INTEGER:
             val = int(buf)
         elif flags & Client._FLAG_LONG:

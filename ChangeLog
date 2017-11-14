@@ -13,6 +13,9 @@
    *  Add flake8 testing and cleanups (PR from Tim Graham, cleanups from Sean
       Reifschneider) #112
 
+   * Fixed storing non-ASCII values on Python 2 and binary values on Python 3
+     (PR from Nicolas Noé) #135
+
 Fri, 27 May 2016 13:44:55 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    *  1.58 release.

@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 
 import unittest
+import zlib
 
 import mock
 import six
@@ -127,6 +129,32 @@ class TestMemcache(unittest.TestCase):
         self.mc.set(key, 5)
         value = self.mc.get(key)
         self.assertEqual(value, 5)
+
+    def test_unicode_value(self):
+        key = 'key'
+        value = u'Iñtërnâtiônàlizætiøn2'
+        self.mc.set(key, value)
+        cached_value = self.mc.get(key)
+        self.assertEqual(value, cached_value)
+
+    def test_binary_string(self):
+        value = 'value_to_be_compressed'
+        compressed_value = zlib.compress(value.encode())
+
+        self.mc.set('binary1', compressed_value)
+        compressed_result = self.mc.get('binary1')
+        self.assertEqual(compressed_value, compressed_result)
+        self.assertEqual(value, zlib.decompress(compressed_result).decode())
+
+        self.mc.add('binary1-add', compressed_value)
+        compressed_result = self.mc.get('binary1-add')
+        self.assertEqual(compressed_value, compressed_result)
+        self.assertEqual(value, zlib.decompress(compressed_result).decode())
+
+        self.mc.set_multi({'binary1-set_many': compressed_value})
+        compressed_result = self.mc.get('binary1-set_many')
+        self.assertEqual(compressed_value, compressed_result)
+        self.assertEqual(value, zlib.decompress(compressed_result).decode())
 
     def test_ignore_too_large_value(self):
         # NOTE: "MemCached: while expecting[...]" is normal...
