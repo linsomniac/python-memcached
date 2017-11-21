@@ -31,6 +31,7 @@ class TestMemcache(unittest.TestCase):
         self.mc = Client(servers, debug=1)
 
     def tearDown(self):
+        self.mc.flush_all()
         self.mc.disconnect_all()
 
     def check_setget(self, key, val, noreply=False):
@@ -211,8 +212,9 @@ class TestMemcache(unittest.TestCase):
             "'NOT_FOUND'\n"
         )
 
+    @mock.patch.object(_Host, 'send_cmd')  # Don't send any commands.
     @mock.patch.object(_Host, 'readline')
-    def test_touch_unexpected_reply(self, mock_readline):
+    def test_touch_unexpected_reply(self, mock_readline, mock_send_cmd):
         """touch() logs an error upon receiving an unexpected reply."""
         mock_readline.return_value = 'SET'  # the unexpected reply
         with captured_stderr() as output:
