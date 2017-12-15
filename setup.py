@@ -4,17 +4,18 @@ from setuptools.depends import get_module_constant
 from setuptools import setup  # noqa
 
 
+version = get_module_constant('memcache', '__version__')
 setup(
     name="python-memcached",
-    version=get_module_constant('memcache', '__version__'),
+    version=version,
     description="Pure python memcached client",
     long_description=open("README.md").read(),
     author="Evan Martin",
     author_email="martine@danga.com",
     maintainer="Sean Reifschneider",
     maintainer_email="jafo@tummy.com",
-    url="http://www.tummy.com/Community/software/python-memcached/",
-    download_url="ftp://ftp.tummy.com/pub/python-memcached/",
+    url="https://github.com/linsomniac/python-memcached",
+    download_url="https://github.com/linsomniac/python-memcached/releases/download/{0}/python-memcached-{0}.tar.gz".format(version),
     py_modules=["memcache"],
     install_requires=open('requirements.txt').read().split(),
     classifiers=[

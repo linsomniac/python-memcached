@@ -29,4 +29,5 @@ git push --tags
 cd /tmp
 release "$VERSION" python-memcached
 cd python-memcached-"$VERSION"
-python setup.py sdist bdist_wheel upload
+python setup.py sdist bdist_wheel
+twine upload -r pypitest dist/*"$VERSION"* && twine upload -r pypi dist/*"$VERSION"*
