@@ -68,6 +68,8 @@ else:
 
 def cmemcache_hash(key):
     return (((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1
+
+
 serverHashFunction = cmemcache_hash
 
 
@@ -1443,7 +1445,8 @@ class _Host(object):
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = lambda bufsize: b''
+            def recv(bufsize):
+                return b''
 
         while True:
             index = buf.find(b'\r\n')
