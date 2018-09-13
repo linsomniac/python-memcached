@@ -349,14 +349,14 @@ class Client(threading.local):
             readline = s.readline
             while 1:
                 line = readline()
-                if not line or line.strip() == 'END':
+                if not line or line.strip() == b'END':
                     break
-                item = line.split(' ', 2)
-                if line.startswith('STAT active_slabs') or line.startswith('STAT total_malloced'):
+                item = line.split(b' ', 2)
+                if line.startswith(b'STAT active_slabs') or line.startswith(b'STAT total_malloced'):
                     serverData[item[1]] = item[2]
                 else:
                     # 0 = STAT, 1 = ITEM, 2 = Value
-                    slab = item[1].split(':', 2)
+                    slab = item[1].split(b':', 2)
                     # 0 = Slab #, 1 = Name
                     if slab[0] not in serverData:
                         serverData[slab[0]] = {}
