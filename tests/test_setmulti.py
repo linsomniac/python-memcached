@@ -61,11 +61,11 @@ class test_Memcached_Set_Multi(unittest.TestCase):
         socket.socket = self.old_socket
 
     def test_Socket_Disconnect(self):
-        mapping = {'foo': 'FOO', 'bar': 'BAR'}
+        mapping = {'foo': 'FOO', 'bar': 'BAR', (0, 'foobar'): 'FOOBAR'}
         with captured_stderr() as log:
             bad_keys = self.mc.set_multi(mapping)
         self.assertIn('connection closed in readline().', log.getvalue())
-        self.assertEqual(sorted(bad_keys), ['bar', 'foo'])
+        self.assertEqual(sorted(bad_keys), ['bar', 'foo', 'foobar'])
         if DEBUG:
             print('set_multi({0!r}) -> {1!r}'.format(mapping, bad_keys))
 
