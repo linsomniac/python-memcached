@@ -106,8 +106,10 @@ _DEAD_RETRY = 30  # number of seconds before retrying a dead server.
 _SOCKET_TIMEOUT = 3  # number of seconds before sockets timeout.
 
 
-class Client(threading.local):
-    """Object representing a pool of memcache servers.
+class BasicClient(object):
+    """Object representing a pool of memcache servers. This is not thread-safe,
+    and should either be wrapped in a thread-local variable or other
+    synchronizing mechanism.
 
     See L{memcache} for an overview.
 
@@ -207,7 +209,7 @@ class Client(threading.local):
         to ensure it is the correct length and composed of the right
         characters.
         """
-        super(Client, self).__init__()
+        super(BasicClient, self).__init__()
         self.debug = debug
         self.dead_retry = dead_retry
         self.socket_timeout = socket_timeout
@@ -1440,7 +1442,8 @@ class _Host(object):
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = lambda bufsize: b''
+            def recv(bufsize):
+                return b''
 
         while True:
             index = buf.find(b'\r\n')
@@ -1498,6 +1501,13 @@ class _Host(object):
             return "inet6:[%s]:%d%s" % (self.address[0], self.address[1], d)
         else:
             return "unix:%s%s" % (self.address, d)
+
+
+class Client(threading.local, BasicClient):
+    """Thread-safe memcache client. See L{BasicClient} for more information on
+    how to use this class.
+    """
+    pass
 
 
 def _doctest():
