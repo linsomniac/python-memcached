@@ -1442,7 +1442,8 @@ class _Host(object):
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = lambda bufsize: b''
+            def recv(bufsize):
+                return b''
 
         while True:
             index = buf.find(b'\r\n')
