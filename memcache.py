@@ -1113,6 +1113,61 @@ class Client(threading.local):
                 server.mark_dead(msg)
             return None
 
+    def _gat(self, cmd, key, time, noreply=False):
+        key = self._encode_key(key)
+        if self.do_check_key:
+            self.check_key(key)
+        server, key = self._get_server(key)
+        if not server:
+            return None
+
+        def _unsafe_gat():
+            self._statlog(cmd)
+            try:
+                _time = str(time)
+                _time = _time.encode('utf-8')
+                cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
+                fullcmd = b''.join((cmd_bytes, b' ', _time, b' ', key))
+                server.send_cmd(fullcmd)
+                rkey = flags = rlen = cas_id = None
+
+                if cmd == 'gats':
+                    rkey, flags, rlen, cas_id, = self._expect_cas_value(
+                        server, raise_exception=True
+                    )
+                    if rkey and self.cache_cas:
+                        self.cas_ids[rkey] = cas_id
+                else:
+                    rkey, flags, rlen, = self._expectvalue(
+                        server, raise_exception=True
+                    )
+
+                if not rkey:
+                    return None
+                try:
+                    value = self._recv_value(server, flags, rlen)
+                finally:
+                    server.expect(b"END", raise_exception=True)
+            except (_Error, socket.error) as msg:
+                if isinstance(msg, tuple):
+                    msg = msg[1]
+                server.mark_dead(msg)
+                return None
+
+            return value
+
+        try:
+            return _unsafe_gat()
+        except _ConnectionDeadError:
+            # retry once
+            try:
+                if server.connect():
+                    return _unsafe_gat()
+                return None
+            except (_ConnectionDeadError, socket.error) as msg:
+                server.mark_dead(msg)
+            return None
+
     def get(self, key):
         '''Retrieves a key from the memcache.
 
@@ -1126,6 +1181,20 @@ class Client(threading.local):
         @return: The value or None.
         '''
         return self._get('gets', key)
+
+    def gat(self, key, time=1):
+        '''Retrieves and touches a key from the memcache.
+
+        @return: The value or None.
+        '''
+        return self._gat('gat', key, time=time)
+
+    def gats(self, key, time=1):
+        '''Retrieves and touches a key from the memcache. Used in conjunction with 'cas'.
+
+        @return: The value or None.
+        '''
+        return self._gat('gats', key, time=time)
 
     def get_multi(self, keys, key_prefix=''):
         '''Retrieves multiple keys from the memcache doing just one query.
@@ -1440,7 +1509,8 @@ class _Host(object):
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = lambda bufsize: b''
+            def recv(bufsize):
+                return b''
 
         while True:
             index = buf.find(b'\r\n')

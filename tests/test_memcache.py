@@ -45,6 +45,17 @@ class TestMemcache(unittest.TestCase):
         self.check_setget("an_integer", 42)
         self.check_setget("an_integer_2", 42, noreply=True)
 
+    def check_setgat(self, key, val, noreply=False):
+        self.mc.set(key, val, 20, noreply=noreply)
+        newval = self.mc.gat(key, 2)
+        self.assertEqual(newval, val)
+
+    def test_setgat(self):
+        self.check_setgat("gat_a_string", "some random string")
+        self.check_setgat("gat_a_string_2", "some random string", noreply=True)
+        self.check_setgat("gat_an_integer", 42)
+        self.check_setgat("gat_an_integer_2", 42, noreply=True)
+
     def test_delete(self):
         self.check_setget("long", int(1 << 30))
         result = self.mc.delete("long")
