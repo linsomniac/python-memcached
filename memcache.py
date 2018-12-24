@@ -56,6 +56,8 @@ import threading
 import time
 import zlib
 
+from typing import Any, Dict, Iterable, List, Optional, overload, Text, Tuple, TypeVar, Union  # noqa
+
 import six
 
 if six.PY2:
@@ -64,8 +66,16 @@ if six.PY2:
 else:
     import pickle
 
+MCKeyType = Union[bytes, Text, Tuple[int, Union[bytes, Text]]]
+MCValueType = object
+if six.PY2:
+    T = TypeVar('T', bytes, int, long)
+else:
+    T = TypeVar('T', bytes, int)
+
 
 def cmemcache_hash(key):
+    # type: (bytes) -> int
     return (((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1
 serverHashFunction = cmemcache_hash
 
@@ -241,7 +251,28 @@ class Client(threading.local):
         except TypeError:
             self.picklerIsKeyword = False
 
+    @overload
     def _encode_key(self, key):
+        # type: (int) -> int
+        pass
+
+    @overload  # noqa
+    def _encode_key(self, key):
+        # type: (Tuple[int, int]) -> Tuple[int, int]
+        pass
+
+    @overload  # noqa
+    def _encode_key(self, key):
+        # type: (Union[bytes, Text]) -> bytes
+        pass
+
+    @overload  # noqa
+    def _encode_key(self, key):
+        # type: (Tuple[int, Union[bytes, Text]]) -> Tuple[int, bytes]
+        pass
+
+    def _encode_key(self, key):  # noqa
+        # type: (Any) -> Any
         if isinstance(key, tuple):
             if isinstance(key[1], six.text_type):
                 return (key[0], key[1].encode('utf8'))
@@ -250,14 +281,20 @@ class Client(threading.local):
         return key
 
     def _encode_cmd(self, cmd, key, headers, noreply, *args):
-        cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
-        fullcmd = [cmd_bytes, b' ', key]
+        # type: (str, bytes, Optional[str], bool, *bytes) -> bytes
+        if six.PY3:
+            cmd_bytes = cmd.encode('utf-8')
+        else:
+            cmd_bytes = cmd
+        fullcmd = [cmd_bytes, b' ', key]  # type: List[bytes]
 
         if headers:
             if six.PY3:
-                headers = headers.encode('utf-8')
+                bheaders = headers.encode('utf-8')
+            else:
+                bheaders = headers
             fullcmd.append(b' ')
-            fullcmd.append(headers)
+            fullcmd.append(bheaders)
 
         if noreply:
             fullcmd.append(b' noreply')
@@ -278,6 +315,7 @@ class Client(threading.local):
         self.cas_ids = {}
 
     def set_servers(self, servers):
+        # type: (List[str]) -> None
         """Set the pool of servers used by this client.
 
         @param servers: an array of servers.
@@ -398,9 +436,10 @@ class Client(threading.local):
                 continue
             s.flush()
 
-    def debuglog(self, str):
+    def debuglog(self, s):
+        # type: (str) -> None
         if self.debug:
-            sys.stderr.write("MemCached: %s\n" % str)
+            sys.stderr.write("MemCached: %s\n" % s)
 
     def _statlog(self, func):
         if func not in self.stats:
@@ -420,6 +459,7 @@ class Client(threading.local):
                 self.buckets.append(server)
 
     def _get_server(self, key):
+        # type: (Union[Tuple[int, bytes], bytes]) -> Union[Tuple[None, None], Tuple[_Host, bytes]]
         if isinstance(key, tuple):
             serverhash, key = key
         else:
@@ -433,10 +473,8 @@ class Client(threading.local):
             if server.connect():
                 # print("(using server %s)" % server,)
                 return server, key
-            serverhash = str(serverhash) + str(i)
-            if isinstance(serverhash, six.text_type):
-                serverhash = serverhash.encode('ascii')
-            serverhash = serverHashFunction(serverhash)
+            bserverhash = b"%d%d" % (serverhash, i)
+            serverhash = serverHashFunction(bserverhash)
         return None, None
 
     def disconnect_all(self):
@@ -444,6 +482,7 @@ class Client(threading.local):
             s.close_socket()
 
     def delete_multi(self, keys, time=None, key_prefix='', noreply=False):
+        # type: (Iterable[MCKeyType], Optional[int], str, bool) -> int
         """Delete multiple keys in the memcache doing just one query.
 
         >>> notset_keys = mc.set_multi({'a1' : 'val1', 'a2' : 'val2'})
@@ -480,10 +519,10 @@ class Client(threading.local):
 
         rc = 1
         for server in six.iterkeys(server_keys):
-            bigcmd = []
+            bigcmd = []  # type: List[bytes]
             write = bigcmd.append
             if time is not None:
-                headers = str(time)
+                headers = str(time)  # type: Optional[str]
             else:
                 headers = None
             for key in server_keys[server]:  # These are mangled keys
@@ -518,6 +557,7 @@ class Client(threading.local):
         return rc
 
     def delete(self, key, time=None, noreply=False):
+        # type: (MCKeyType, Optional[int], bool) -> int
         '''Deletes a key from the memcache.
 
         @return: Nonzero on success.
@@ -531,6 +571,7 @@ class Client(threading.local):
                                  time, noreply)
 
     def touch(self, key, time=0, noreply=False):
+        # type: (MCKeyType, int, bool) -> int
         '''Updates the expiration time of a key in memcache.
 
         @return: Nonzero on success.
@@ -546,18 +587,20 @@ class Client(threading.local):
         return self._deletetouch([b'TOUCHED'], "touch", key, time, noreply)
 
     def _deletetouch(self, expected, cmd, key, time=0, noreply=False):
-        key = self._encode_key(key)
+        # type: (List[bytes], str, MCKeyType, Optional[int], bool) -> int
+        ekey = self._encode_key(key)
         if self.do_check_key:
-            self.check_key(key)
-        server, key = self._get_server(key)
+            self.check_key(ekey)
+        server, bkey = self._get_server(ekey)
         if not server:
             return 0
+        assert bkey is not None
         self._statlog(cmd)
         if time is not None:
-            headers = str(time)
+            headers = str(time)  # type: Optional[str]
         else:
             headers = None
-        fullcmd = self._encode_cmd(cmd, key, headers, noreply)
+        fullcmd = self._encode_cmd(cmd, bkey, headers, noreply)
 
         try:
             server.send_cmd(fullcmd)
@@ -575,6 +618,7 @@ class Client(threading.local):
         return 0
 
     def incr(self, key, delta=1, noreply=False):
+        # type: (MCKeyType, int, bool) -> Optional[int]
         """Increment value for C{key} by C{delta}
 
         Sends a command to the server to atomically increment the
@@ -608,6 +652,7 @@ class Client(threading.local):
         return self._incrdecr("incr", key, delta, noreply)
 
     def decr(self, key, delta=1, noreply=False):
+        # type: (MCKeyType, int, bool) -> Optional[int]
         """Decrement value for C{key} by C{delta}
 
         Like L{incr}, but decrements.  Unlike L{incr}, underflow is
@@ -626,18 +671,20 @@ class Client(threading.local):
         return self._incrdecr("decr", key, delta, noreply)
 
     def _incrdecr(self, cmd, key, delta, noreply=False):
-        key = self._encode_key(key)
+        # type: (str, MCKeyType, int, bool) -> Optional[int]
+        ekey = self._encode_key(key)
         if self.do_check_key:
-            self.check_key(key)
-        server, key = self._get_server(key)
+            self.check_key(ekey)
+        server, bkey = self._get_server(ekey)
         if not server:
             return None
+        assert bkey is not None
         self._statlog(cmd)
-        fullcmd = self._encode_cmd(cmd, key, str(delta), noreply)
+        fullcmd = self._encode_cmd(cmd, bkey, str(delta), noreply)
         try:
             server.send_cmd(fullcmd)
             if noreply:
-                return
+                return None
             line = server.readline()
             if line is None or line.strip() == b'NOT_FOUND':
                 return None
@@ -649,6 +696,7 @@ class Client(threading.local):
             return None
 
     def add(self, key, val, time=0, min_compress_len=0, noreply=False):
+        # type: (MCKeyType, MCValueType, int, int, bool) -> int
         '''Add new key with value.
 
         Like L{set}, but only stores in memcache if the key doesn't
@@ -660,6 +708,7 @@ class Client(threading.local):
         return self._set("add", key, val, time, min_compress_len, noreply)
 
     def append(self, key, val, time=0, min_compress_len=0, noreply=False):
+        # type: (MCKeyType, MCValueType, int, int, bool) -> int
         '''Append the value to the end of the existing key's value.
 
         Only stores in memcache if key already exists.
@@ -671,6 +720,7 @@ class Client(threading.local):
         return self._set("append", key, val, time, min_compress_len, noreply)
 
     def prepend(self, key, val, time=0, min_compress_len=0, noreply=False):
+        # type: (MCKeyType, MCValueType, int, int, bool) -> int
         '''Prepend the value to the beginning of the existing key's value.
 
         Only stores in memcache if key already exists.
@@ -682,6 +732,7 @@ class Client(threading.local):
         return self._set("prepend", key, val, time, min_compress_len, noreply)
 
     def replace(self, key, val, time=0, min_compress_len=0, noreply=False):
+        # type: (MCKeyType, MCValueType, int, int, bool) -> int
         '''Replace existing key with value.
 
         Like L{set}, but only stores in memcache if the key already exists.
@@ -693,6 +744,7 @@ class Client(threading.local):
         return self._set("replace", key, val, time, min_compress_len, noreply)
 
     def set(self, key, val, time=0, min_compress_len=0, noreply=False):
+        # type: (MCKeyType, MCValueType, int, int, bool) -> int
         '''Unconditionally sets a key to a given value in the memcache.
 
         The C{key} can optionally be an tuple, with the first element
@@ -727,6 +779,7 @@ class Client(threading.local):
         return self._set("set", key, val, time, min_compress_len, noreply)
 
     def cas(self, key, val, time=0, min_compress_len=0, noreply=False):
+        # type: (MCKeyType, MCValueType, int, int, bool) -> int
         '''Check and set (CAS)
 
         Sets a key to a given value in the memcache if it hasn't been
@@ -764,6 +817,7 @@ class Client(threading.local):
         return self._set("cas", key, val, time, min_compress_len, noreply)
 
     def _map_and_prefix_keys(self, key_iterable, key_prefix):
+        # type: (Iterable[MCKeyType], Union[bytes, Text]) -> Tuple[Dict[_Host, List[bytes]], Dict[bytes, MCKeyType]]
         """Map keys to the servers they will reside on.
 
         Compute the mapping of server (_Host instance) -> list of keys to
@@ -777,40 +831,48 @@ class Client(threading.local):
             self.check_key(key_prefix)
 
         # server (_Host) -> list of unprefixed server keys in mapping
-        server_keys = {}
+        server_keys = {}  # type: Dict[_Host, List[bytes]]
 
-        prefixed_to_orig_key = {}
+        prefixed_to_orig_key = {}  # type: Dict[bytes, MCKeyType]
         # build up a list for each server of all the keys we want.
         for orig_key in key_iterable:
             if isinstance(orig_key, tuple):
                 # Tuple of hashvalue, key ala _get_server(). Caller is
                 # essentially telling us what server to stuff this on.
                 # Ensure call to _get_server gets a Tuple as well.
-                serverhash, key = orig_key
+                serverhash, skey = orig_key
 
-                key = self._encode_key(key)
-                if not isinstance(key, six.binary_type):
+                ekey = self._encode_key(skey)
+                if not isinstance(ekey, six.binary_type):
                     # set_multi supports int / long keys.
-                    key = str(key)
-                    if six.PY3:
-                        key = key.encode('utf8')
-                bytes_orig_key = key
+                    if six.PY2:
+                        assert isinstance(ekey, six.integer_types)
+                        ekey = bytes_orig_key = str(ekey)
+                    else:
+                        assert isinstance(ekey, int)
+                        ekey = bytes_orig_key = b"%d" % ekey
+                else:
+                    bytes_orig_key = ekey
 
                 # Gotta pre-mangle key before hashing to a
                 # server. Returns the mangled key.
-                server, key = self._get_server(
-                    (serverhash, key_prefix + key))
+                server, bkey = self._get_server(
+                    (serverhash, key_prefix + ekey))
 
                 orig_key = orig_key[1]
             else:
-                key = self._encode_key(orig_key)
-                if not isinstance(key, six.binary_type):
+                ekey = self._encode_key(orig_key)
+                if not isinstance(ekey, six.binary_type):
                     # set_multi supports int / long keys.
-                    key = str(key)
-                    if six.PY3:
-                        key = key.encode('utf8')
-                bytes_orig_key = key
-                server, key = self._get_server(key_prefix + key)
+                    if six.PY2:
+                        assert isinstance(ekey, six.integer_types)
+                        ekey = bytes_orig_key = str(ekey)
+                    else:
+                        assert isinstance(ekey, int)
+                        ekey = bytes_orig_key = b"%d" % ekey
+                else:
+                    bytes_orig_key = ekey
+                server, bkey = self._get_server(key_prefix + ekey)
 
             #  alert when passed in key is None
             if orig_key is None:
@@ -822,11 +884,12 @@ class Client(threading.local):
 
             if not server:
                 continue
+            assert bkey is not None
 
             if server not in server_keys:
                 server_keys[server] = []
-            server_keys[server].append(key)
-            prefixed_to_orig_key[key] = orig_key
+            server_keys[server].append(bkey)
+            prefixed_to_orig_key[bkey] = orig_key
 
         return (server_keys, prefixed_to_orig_key)
 
@@ -950,6 +1013,7 @@ class Client(threading.local):
         return notstored
 
     def _val_to_store_info(self, val, min_compress_len):
+        # type: (MCValueType, int) -> Union[int, Tuple[int, int, bytes]]
         """Transform val to a storable representation.
 
         Returns a tuple of the flags, the length of the new value, and
@@ -961,26 +1025,27 @@ class Client(threading.local):
         # and restored as instances of the correct class.
         val_type = type(val)
         if val_type == six.binary_type:
-            pass
+            assert isinstance(val, bytes)
+            bval = val  # type: bytes
         elif val_type == six.text_type:
+            assert isinstance(val, Text)
             flags |= Client._FLAG_TEXT
-            val = val.encode('utf-8')
+            bval = val.encode('utf-8')
         elif val_type == int:
+            assert isinstance(val, int)
             flags |= Client._FLAG_INTEGER
-            val = '%d' % val
-            if six.PY3:
-                val = val.encode('ascii')
+            bval = b'%d' % val
             # force no attempt to compress this silly string.
             min_compress_len = 0
         elif six.PY2 and isinstance(val, long):  # noqa: F821
+            assert isinstance(val, long)
             flags |= Client._FLAG_LONG
-            val = str(val)
-            if six.PY3:
-                val = val.encode('ascii')
+            bval = b'%d' % val
             # force no attempt to compress this silly string.
             min_compress_len = 0
         else:
             flags |= Client._FLAG_PICKLE
+            # Why not use pickler.dumps(val)?
             file = BytesIO()
             if self.picklerIsKeyword:
                 pickler = self.pickler(file, protocol=self.pickleProtocol)
@@ -989,39 +1054,40 @@ class Client(threading.local):
             if self.persistent_id:
                 pickler.persistent_id = self.persistent_id
             pickler.dump(val)
-            val = file.getvalue()
+            bval = file.getvalue()
 
-        lv = len(val)
+        lv = len(bval)
         # We should try to compress if min_compress_len > 0
         # and this string is longer than our min threshold.
         if min_compress_len and lv > min_compress_len:
-            comp_val = self.compressor(val)
+            comp_val = self.compressor(bval)
             # Only retain the result if the compression result is smaller
             # than the original.
             if len(comp_val) < lv:
                 flags |= Client._FLAG_COMPRESSED
-                val = comp_val
+                bval = comp_val
 
         #  silently do not store if value length exceeds maximum
         if (self.server_max_value_length != 0 and
-                len(val) > self.server_max_value_length):
+                len(bval) > self.server_max_value_length):
             return 0
 
-        return (flags, len(val), val)
+        return (flags, len(bval), bval)
 
     def _set(self, cmd, key, val, time, min_compress_len=0, noreply=False):
-        key = self._encode_key(key)
+        # type: (str, MCKeyType, MCValueType, int, int, bool) -> int
+        ekey = self._encode_key(key)
         if self.do_check_key:
-            self.check_key(key)
-        server, key = self._get_server(key)
+            self.check_key(ekey)
+        server, bkey = self._get_server(ekey)
         if not server:
             return 0
 
         def _unsafe_set():
             self._statlog(cmd)
 
-            if cmd == 'cas' and key not in self.cas_ids:
-                return self._set('set', key, val, time, min_compress_len,
+            if cmd == 'cas' and bkey not in self.cas_ids:
+                return self._set('set', bkey, val, time, min_compress_len,
                                  noreply)
 
             store_info = self._val_to_store_info(val, min_compress_len)
@@ -1031,10 +1097,10 @@ class Client(threading.local):
 
             if cmd == 'cas':
                 headers = ("%d %d %d %d"
-                           % (flags, time, len_val, self.cas_ids[key]))
+                           % (flags, time, len_val, self.cas_ids[bkey]))
             else:
                 headers = "%d %d %d" % (flags, time, len_val)
-            fullcmd = self._encode_cmd(cmd, key, headers, noreply,
+            fullcmd = self._encode_cmd(cmd, bkey, headers, noreply,
                                        b'\r\n', encoded_val)
 
             try:
@@ -1060,10 +1126,11 @@ class Client(threading.local):
             return 0
 
     def _get(self, cmd, key):
-        key = self._encode_key(key)
+        # type: (str, MCKeyType) -> Optional[MCValueType]
+        ekey = self._encode_key(key)
         if self.do_check_key:
-            self.check_key(key)
-        server, key = self._get_server(key)
+            self.check_key(ekey)
+        server, bkey = self._get_server(ekey)
         if not server:
             return None
 
@@ -1072,7 +1139,7 @@ class Client(threading.local):
 
             try:
                 cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
-                fullcmd = b''.join((cmd_bytes, b' ', key))
+                fullcmd = b''.join((cmd_bytes, b' ', bkey))
                 server.send_cmd(fullcmd)
                 rkey = flags = rlen = cas_id = None
 
@@ -1222,6 +1289,7 @@ class Client(threading.local):
         return retvals
 
     def _expect_cas_value(self, server, line=None, raise_exception=False):
+        # type: (_Host, Optional[bytes], bool) -> Union[Tuple[None, None, None, None], Tuple[bytes, int, int, int]]
         if not line:
             line = server.readline(raise_exception)
 
@@ -1232,18 +1300,20 @@ class Client(threading.local):
             return (None, None, None, None)
 
     def _expectvalue(self, server, line=None, raise_exception=False):
+        # type: (_Host, Optional[bytes], bool) -> Union[Tuple[None, None, None], Tuple[bytes, int, int]]
         if not line:
             line = server.readline(raise_exception)
 
         if line and line[:5] == b'VALUE':
             resp, rkey, flags, len = line.split()
-            flags = int(flags)
+            rflags = int(flags)
             rlen = int(len)
-            return (rkey, flags, rlen)
+            return (rkey, rflags, rlen)
         else:
             return (None, None, None)
 
     def _recv_value(self, server, flags, rlen):
+        # type: (_Host, int, int) -> MCValueType
         rlen += 2  # include \r\n
         buf = server.recv(rlen)
         if len(buf) != rlen:
@@ -1258,7 +1328,7 @@ class Client(threading.local):
             flags &= ~Client._FLAG_COMPRESSED
         if flags == 0:
             # Bare bytes
-            val = buf
+            val = buf  # type: Any
         elif flags & Client._FLAG_TEXT:
             val = buf.decode('utf-8')
         elif flags & Client._FLAG_INTEGER:
@@ -1420,17 +1490,20 @@ class _Host(object):
             self.socket = None
 
     def send_cmd(self, cmd):
+        # type: (Union[bytes, Text]) -> None
         if isinstance(cmd, six.text_type):
             cmd = cmd.encode('utf8')
         self.socket.sendall(cmd + b'\r\n')
 
     def send_cmds(self, cmds):
+        # type: (Union[bytes, Text]) -> None
         """cmds already has trailing \r\n's applied."""
         if isinstance(cmds, six.text_type):
             cmds = cmds.encode('utf8')
         self.socket.sendall(cmds)
 
     def readline(self, raise_exception=False):
+        # type: (bool) -> bytes
         """Read a line and return it.
 
         If "raise_exception" is set, raise _ConnectionDeadError if the
@@ -1453,25 +1526,28 @@ class _Host(object):
                 if raise_exception:
                     raise _ConnectionDeadError()
                 else:
-                    return ''
+                    return b''
 
             buf += data
         self.buffer = buf[index + 2:]
         return buf[:index]
 
     def expect(self, text, raise_exception=False):
+        # type: (bytes, bool) -> bytes
         line = self.readline(raise_exception)
         if self.debug and line != text:
             if six.PY3:
-                text = text.decode('utf8')
+                log_text = text.decode('utf8')
                 log_line = line.decode('utf8', 'replace')
             else:
+                log_text = text
                 log_line = line
             self.debuglog("while expecting %r, got unexpected response %r"
-                          % (text, log_line))
+                          % (log_text, log_line))
         return line
 
     def recv(self, rlen):
+        # type: (int) -> bytes
         self_socket_recv = self.socket.recv
         buf = self.buffer
         while len(buf) < rlen:

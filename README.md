@@ -30,3 +30,8 @@ Test patches locally and easily by running tox:
 Test for style by running tox:
 
     tox -e pep8
+
+Type checking with mypy:
+
+    mypy --py2 memcache.py tests/*.py
+    mypy memcache.py tests/*.py

@@ -6,6 +6,8 @@ import zlib
 
 import mock
 
+from typing import Any, Text  # noqa
+
 from memcache import Client, _Host, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 from .utils import captured_stderr
 
@@ -13,39 +15,47 @@ from .utils import captured_stderr
 class FooStruct(object):
 
     def __init__(self):
+        # type: () -> None
         self.bar = "baz"
 
     def __str__(self):
+        # type: () -> str
         return "A FooStruct"
 
     def __eq__(self, other):
+        # type: (object) -> bool
         if isinstance(other, FooStruct):
             return self.bar == other.bar
-        return 0
+        return NotImplemented
 
 
 class TestMemcache(unittest.TestCase):
     def setUp(self):
+        # type: () -> None
         # TODO(): unix socket server stuff
         servers = ["127.0.0.1:11211"]
         self.mc = Client(servers, debug=1)
 
     def tearDown(self):
+        # type: () -> None
         self.mc.flush_all()
         self.mc.disconnect_all()
 
     def check_setget(self, key, val, noreply=False):
+        # type: (Text, object, bool) -> None
         self.mc.set(key, val, noreply=noreply)
         newval = self.mc.get(key)
         self.assertEqual(newval, val)
 
     def test_setget(self):
+        # type: () -> None
         self.check_setget("a_string", "some random string")
         self.check_setget("a_string_2", "some random string", noreply=True)
         self.check_setget("an_integer", 42)
         self.check_setget("an_integer_2", 42, noreply=True)
 
     def test_delete(self):
+        # type: () -> None
         self.check_setget("long", int(1 << 30))
         result = self.mc.delete("long")
         self.assertEqual(result, True)
@@ -54,11 +64,13 @@ class TestMemcache(unittest.TestCase):
     @mock.patch.object(_Host, 'send_cmd')
     @mock.patch.object(_Host, 'readline')
     def test_touch(self, mock_readline, mock_send_cmd):
+        # type: (Any, Any) -> None
         with captured_stderr():
             self.mc.touch('key')
         mock_send_cmd.assert_called_with(b'touch key 0')
 
     def test_get_multi(self):
+        # type: () -> None
         self.check_setget("gm_a_string", "some random string")
         self.check_setget("gm_an_integer", 42)
         self.assertEqual(
@@ -66,34 +78,41 @@ class TestMemcache(unittest.TestCase):
             {"gm_an_integer": 42, "gm_a_string": "some random string"})
 
     def test_get_unknown_value(self):
+        # type: () -> None
         self.mc.delete("unknown_value")
 
         self.assertEqual(self.mc.get("unknown_value"), None)
 
     def test_setget_foostruct(self):
+        # type: () -> None
         f = FooStruct()
         self.check_setget("foostruct", f)
         self.check_setget("foostruct_2", f, noreply=True)
 
     def test_incr(self):
+        # type: () -> None
         self.check_setget("i_an_integer", 42)
         self.assertEqual(self.mc.incr("i_an_integer", 1), 43)
 
     def test_incr_noreply(self):
+        # type: () -> None
         self.check_setget("i_an_integer_2", 42)
         self.assertEqual(self.mc.incr("i_an_integer_2", 1, noreply=True), None)
         self.assertEqual(self.mc.get("i_an_integer_2"), 43)
 
     def test_decr(self):
+        # type: () -> None
         self.check_setget("i_an_integer", 42)
         self.assertEqual(self.mc.decr("i_an_integer", 1), 41)
 
     def test_decr_noreply(self):
+        # type: () -> None
         self.check_setget("i_an_integer_2", 42)
         self.assertEqual(self.mc.decr("i_an_integer_2", 1, noreply=True), None)
         self.assertEqual(self.mc.get("i_an_integer_2"), 41)
 
     def test_sending_spaces(self):
+        # type: () -> None
         try:
             self.mc.set("this has spaces", 1)
         except Client.MemcachedKeyCharacterError as err:
@@ -103,6 +122,7 @@ class TestMemcache(unittest.TestCase):
                 "Expected Client.MemcachedKeyCharacterError, nothing raised")
 
     def test_sending_control_characters(self):
+        # type: () -> None
         try:
             self.mc.set("this\x10has\x11control characters\x02", 1)
         except Client.MemcachedKeyCharacterError as err:
@@ -112,6 +132,7 @@ class TestMemcache(unittest.TestCase):
                 "Expected Client.MemcachedKeyCharacterError, nothing raised")
 
     def test_sending_key_too_long(self):
+        # type: () -> None
         try:
             self.mc.set('a' * SERVER_MAX_KEY_LENGTH + 'a', 1)
         except Client.MemcachedKeyLengthError as err:
@@ -125,10 +146,12 @@ class TestMemcache(unittest.TestCase):
         self.mc.set('a' * SERVER_MAX_KEY_LENGTH, 1, noreply=True)
 
     def test_setget_boolean(self):
+        # type: () -> None
         """GitHub issue #75. Set/get with boolean values."""
         self.check_setget("bool", True)
 
     def test_unicode_key(self):
+        # type: () -> None
         s = u'\u4f1a'
         maxlen = SERVER_MAX_KEY_LENGTH // len(s.encode('utf-8'))
         key = s * maxlen
@@ -138,6 +161,7 @@ class TestMemcache(unittest.TestCase):
         self.assertEqual(value, 5)
 
     def test_unicode_value(self):
+        # type: () -> None
         key = 'key'
         value = u'Iñtërnâtiônàlizætiøn2'
         self.mc.set(key, value)
@@ -145,6 +169,7 @@ class TestMemcache(unittest.TestCase):
         self.assertEqual(value, cached_value)
 
     def test_binary_string(self):
+        # type: () -> None
         value = 'value_to_be_compressed'
         compressed_value = zlib.compress(value.encode())
 
@@ -164,6 +189,7 @@ class TestMemcache(unittest.TestCase):
         self.assertEqual(value, zlib.decompress(compressed_result).decode())
 
     def test_ignore_too_large_value(self):
+        # type: () -> None
         # NOTE: "MemCached: while expecting[...]" is normal...
         key = 'keyhere'
 
@@ -183,6 +209,7 @@ class TestMemcache(unittest.TestCase):
         self.assertTrue(self.mc.get(key) is None)
 
     def test_get_set_multi_key_prefix(self):
+        # type: () -> None
         """Testing set_multi() with no memcacheds running."""
 
         prefix = 'pfx_'
@@ -195,6 +222,7 @@ class TestMemcache(unittest.TestCase):
                          values)
 
     def test_set_multi_dead_servers(self):
+        # type: () -> None
         """Testing set_multi() with no memcacheds running."""
 
         self.mc.disconnect_all()
@@ -206,6 +234,7 @@ class TestMemcache(unittest.TestCase):
         self.assertEqual(sorted(errors), ['key1', 'key2'])
 
     def test_disconnect_all_delete_multi(self):
+        # type: () -> None
         """Testing delete_multi() with no memcacheds running."""
         self.mc.disconnect_all()
         with captured_stderr() as output:
@@ -222,6 +251,7 @@ class TestMemcache(unittest.TestCase):
     @mock.patch.object(_Host, 'send_cmd')  # Don't send any commands.
     @mock.patch.object(_Host, 'readline')
     def test_touch_unexpected_reply(self, mock_readline, mock_send_cmd):
+        # type: (Any, Any) -> None
         """touch() logs an error upon receiving an unexpected reply."""
         mock_readline.return_value = 'SET'  # the unexpected reply
         with captured_stderr() as output:
