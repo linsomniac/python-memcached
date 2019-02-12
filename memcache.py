@@ -1059,7 +1059,7 @@ class Client(threading.local):
                 server.mark_dead(msg)
             return 0
 
-    def _get(self, cmd, key):
+    def _get(self, cmd, key, default=None):
         key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
@@ -1088,7 +1088,7 @@ class Client(threading.local):
                     )
 
                 if not rkey:
-                    return None
+                    return default
                 try:
                     value = self._recv_value(server, flags, rlen)
                 finally:
@@ -1113,12 +1113,12 @@ class Client(threading.local):
                 server.mark_dead(msg)
             return None
 
-    def get(self, key):
+    def get(self, key, default=None):
         '''Retrieves a key from the memcache.
 
         @return: The value or None.
         '''
-        return self._get('get', key)
+        return self._get('get', key, default)
 
     def gets(self, key):
         '''Retrieves a key from the memcache. Used in conjunction with 'cas'.

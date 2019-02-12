@@ -51,6 +51,20 @@ class TestMemcache(unittest.TestCase):
         self.assertEqual(result, True)
         self.assertEqual(self.mc.get("long"), None)
 
+    def test_default(self):
+        key = "default"
+        default = object()
+        result = self.mc.get(key, default=default)
+        self.assertEqual(result, default)
+
+        self.mc.set("default", None)
+        result = self.mc.get(key, default=default)
+        self.assertIsNone(result)
+
+        self.mc.set("default", 123)
+        result = self.mc.get(key, default=default)
+        self.assertEqual(result, 123)
+
     @mock.patch.object(_Host, 'send_cmd')
     @mock.patch.object(_Host, 'readline')
     def test_touch(self, mock_readline, mock_send_cmd):
