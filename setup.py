@@ -15,7 +15,10 @@ setup(
     maintainer="Sean Reifschneider",
     maintainer_email="jafo@tummy.com",
     url="https://github.com/linsomniac/python-memcached",
-    download_url="https://github.com/linsomniac/python-memcached/releases/download/{0}/python-memcached-{0}.tar.gz".format(version),
+    download_url=(
+        "https://github.com/linsomniac/python-memcached/releases/download/"
+        "{0}/python-memcached-{0}.tar.gz".format(version)
+    ),
     py_modules=["memcache"],
     install_requires=open('requirements.txt').read().split(),
     classifiers=[
