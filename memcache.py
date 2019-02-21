@@ -1439,7 +1439,7 @@ class _Host(object):
         read fails, otherwise return an empty string.
         """
 
-        def empty_bytes():
+        def empty_bytes(_):
             return b''
 
         buf = self.buffer
