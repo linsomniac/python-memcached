@@ -18,7 +18,7 @@ setup(
     maintainer="Sean Reifschneider",
     maintainer_email="jafo@tummy.com",
     url=github_url,
-    download_url=github_url+direct_release_path,
+    download_url=github_url + direct_release_path,
     py_modules=["memcache"],
     install_requires=open('requirements.txt').read().split(),
     classifiers=[
