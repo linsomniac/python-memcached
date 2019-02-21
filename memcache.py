@@ -1436,11 +1436,15 @@ class _Host(object):
         If "raise_exception" is set, raise _ConnectionDeadError if the
         read fails, otherwise return an empty string.
         """
+
+        def empty_bytes():
+            return b''
+
         buf = self.buffer
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = lambda bufsize: b''
+            recv = empty_bytes
 
         while True:
             index = buf.find(b'\r\n')

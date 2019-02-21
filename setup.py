@@ -5,6 +5,9 @@ from setuptools import setup  # noqa
 
 
 version = get_module_constant('memcache', '__version__')
+github_url = "https://github.com/linsomniac/python-memcached"
+direct_release_path = ("releases/download/{0}/"
+                       "python-memcached-{0}.tar.gz".format(version))
 setup(
     name="python-memcached",
     version=version,
@@ -14,8 +17,8 @@ setup(
     author_email="martine@danga.com",
     maintainer="Sean Reifschneider",
     maintainer_email="jafo@tummy.com",
-    url="https://github.com/linsomniac/python-memcached",
-    download_url="https://github.com/linsomniac/python-memcached/releases/download/{0}/python-memcached-{0}.tar.gz".format(version),
+    url=github_url,
+    download_url=github_url+direct_release_path,
     py_modules=["memcache"],
     install_requires=open('requirements.txt').read().split(),
     classifiers=[
