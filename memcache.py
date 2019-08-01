@@ -136,7 +136,7 @@ class Client(threading.local):
     _FLAG_COMPRESSED = 1 << 3
     _FLAG_TEXT = 1 << 4
 
-    _SERVER_RETRIES = 10  # how many times to try finding a free server.
+    _SERVER_RETRIES = range(10)  # how many times to try finding a free server.
 
     # exceptions for Client
     class MemcachedKeyError(Exception):
@@ -428,7 +428,7 @@ class Client(threading.local):
         if not self.buckets:
             return None, None
 
-        for i in range(Client._SERVER_RETRIES):
+        for i in Client._SERVER_RETRIES:
             server = self.buckets[serverhash % len(self.buckets)]
             if server.connect():
                 # print("(using server %s)" % server,)
