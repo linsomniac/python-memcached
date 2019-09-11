@@ -163,6 +163,10 @@ class TestMemcache(unittest.TestCase):
         self.assertEqual(compressed_value, compressed_result)
         self.assertEqual(value, zlib.decompress(compressed_result).decode())
 
+    def test_setget_bytearray(self):
+        val = bytearray(b'a string')
+        self.check_setget("bytearray", val)
+
     def test_ignore_too_large_value(self):
         # NOTE: "MemCached: while expecting[...]" is normal...
         key = 'keyhere'
@@ -218,6 +222,25 @@ class TestMemcache(unittest.TestCase):
             "MemCached: while expecting 'DELETED', got unexpected response "
             "'NOT_FOUND'\n"
         )
+
+    def test_flag_overwrite_on_instance(self):
+        """Testing that flags are overwritten in object instance"""
+        servers = ["127.0.0.1:11211"]
+        flags_to_overwrite = {
+            Client._FLAG_INTEGER: 1 << 3,     # 0000 0000 0000 1000 == 8
+            Client._FLAG_COMPRESSED: 1 << 1,  # 0000 0000 0000 0010 == 2
+        }
+        another_mc = Client(servers, flags_to_overwrite=flags_to_overwrite, debug=1)
+
+        self.assertEqual(another_mc._FLAG_INTEGER, 1 << 3)
+        self.assertEqual(another_mc._FLAG_COMPRESSED, 1 << 1)
+        self.assertEqual(self.mc._FLAG_INTEGER, 1 << 1)
+        self.assertEqual(self.mc._FLAG_COMPRESSED, 1 << 3)
+        self.assertEqual(Client._FLAG_INTEGER, 1 << 1)
+        self.assertEqual(Client._FLAG_COMPRESSED, 1 << 3)
+
+        another_mc.flush_all()
+        another_mc.disconnect_all()
 
     @mock.patch.object(_Host, 'send_cmd')  # Don't send any commands.
     @mock.patch.object(_Host, 'readline')
