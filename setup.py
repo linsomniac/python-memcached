@@ -10,6 +10,7 @@ setup(
     version=version,
     description="Pure python memcached client",
     long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     author="Evan Martin",
     author_email="martine@danga.com",
     maintainer="Sean Reifschneider",
