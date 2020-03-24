@@ -10,6 +10,6 @@ services:
 install: python setup.py install
 before_script: pip install -r test-requirements.txt
 script:
-  - flake8
+  - flake8 --max-line-length=133
   - nosetests
   - python -c 'import memcache; memcache._doctest()'
