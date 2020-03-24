@@ -1,6 +1,9 @@
 [![Build
 Status](https://travis-ci.org/linsomniac/python-memcached.svg)](https://travis-ci.org/linsomniac/python-memcached)
 
+## Deprecated 
+See the python3 version of python-memcached at https://github.com/eguven/python3-memcached
+
 ## Overview
 
 This software is a 100% Python interface to the memcached memory cache
