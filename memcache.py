@@ -349,10 +349,10 @@ class Client(threading.local):
             readline = s.readline
             while 1:
                 line = readline()
-                if not line or line.strip() == 'END':
+                if not line or line.decode('ascii').strip() == 'END':
                     break
-                item = line.split(' ', 2)
-                if line.startswith('STAT active_slabs') or line.startswith('STAT total_malloced'):
+                item = line.decode('ascii').split(' ', 2)
+                if line.decode('ascii').startswith('STAT active_slabs') or line.decode('ascii').startswith('STAT total_malloced'):
                     serverData[item[1]] = item[2]
                 else:
                     # 0 = STAT, 1 = ITEM, 2 = Value
@@ -380,9 +380,9 @@ class Client(threading.local):
             readline = s.readline
             while 1:
                 line = readline()
-                if not line or line.strip() == 'END':
+                if not line or line.decode('ascii').strip() == 'END':
                     break
-                item = line.split(' ', 2)
+                item = line.decode('ascii').split(' ', 2)
                 # 0 = STAT, 1 = ITEM, 2 = Value
                 slab = item[1].split(':', 2)
                 # 0 = items, 1 = Slab #, 2 = Name
