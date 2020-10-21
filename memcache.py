@@ -107,7 +107,7 @@ _SOCKET_TIMEOUT = 3  # number of seconds before sockets timeout.
 
 
 class Client(threading.local):
-    """Object representing a pool of memcache servers.
+    r"""Object representing a pool of memcache servers.
 
     See L{memcache} for an overview.
 
@@ -1300,8 +1300,8 @@ class Client(threading.local):
             key = key[1]
         if key is None:
             raise Client.MemcachedKeyNoneError("Key is None")
-        if key is '':
-            if key_extra_len is 0:
+        if key == '':
+            if key_extra_len == 0:
                 raise Client.MemcachedKeyNoneError("Key is empty")
 
             #  key is empty but there is some other component to key
