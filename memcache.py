@@ -67,6 +67,8 @@ else:
 
 def cmemcache_hash(key):
     return (((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1
+
+
 serverHashFunction = cmemcache_hash
 
 
@@ -1007,8 +1009,7 @@ class Client(threading.local):
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
-        if (self.server_max_value_length != 0 and
-                len(val) > self.server_max_value_length):
+        if (self.server_max_value_length != 0 and len(val) > self.server_max_value_length):
             return 0
 
         return (flags, len(val), val)
@@ -1314,8 +1315,7 @@ class Client(threading.local):
         if not isinstance(key, six.binary_type):
             raise Client.MemcachedKeyTypeError("Key must be a binary string")
 
-        if (self.server_max_key_length != 0 and
-                len(key) + key_extra_len > self.server_max_key_length):
+        if (self.server_max_key_length != 0 and len(key) + key_extra_len > self.server_max_key_length):
             raise Client.MemcachedKeyLengthError(
                 "Key length is > %s" % self.server_max_key_length
             )
@@ -1440,11 +1440,15 @@ class _Host(object):
         If "raise_exception" is set, raise _ConnectionDeadError if the
         read fails, otherwise return an empty string.
         """
+        def empty_bytes(_: int) -> bytes:
+            "Fake receiver that returns empty bytes when the socket isn't connected"
+            return b''
+
         buf = self.buffer
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = lambda bufsize: b''
+            recv = empty_bytes
 
         while True:
             index = buf.find(b'\r\n')
@@ -1466,11 +1470,8 @@ class _Host(object):
     def expect(self, text, raise_exception=False):
         line = self.readline(raise_exception)
         if self.debug and line != text:
-            if six.PY3:
-                text = text.decode('utf8')
-                log_line = line.decode('utf8', 'replace')
-            else:
-                log_line = line
+            text = text.decode('utf8')
+            log_line = line.decode('utf8', 'replace')
             self.debuglog("while expecting %r, got unexpected response %r"
                           % (text, log_line))
         return line
