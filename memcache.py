@@ -323,11 +323,13 @@ class Client(threading.local):
             serverData = {}
             data.append((name, serverData))
             readline = s.readline
-            while 1:
+            while True:
                 line = readline()
-                if not line or line.decode('ascii').strip() == 'END':
+                if line:
+                    line = line.decode('ascii')
+                if not line or line.strip() == 'END':
                     break
-                stats = line.decode('ascii').split(' ', 2)
+                stats = line.split(' ', 2)
                 serverData[stats[1]] = stats[2]
 
         return data
@@ -347,8 +349,10 @@ class Client(threading.local):
             data.append((name, serverData))
             s.send_cmd('stats slabs')
             readline = s.readline
-            while 1:
+            while True:
                 line = readline()
+                if line:
+                    line = line.decode('ascii')
                 if not line or line.strip() == 'END':
                     break
                 item = line.split(' ', 2)
@@ -378,7 +382,7 @@ class Client(threading.local):
             data.append((name, serverData))
             s.send_cmd('stats items')
             readline = s.readline
-            while 1:
+            while True:
                 line = readline()
                 if not line or line.strip() == 'END':
                     break
