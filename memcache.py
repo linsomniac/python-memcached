@@ -137,6 +137,7 @@ class Client(threading.local):
     _FLAG_LONG = 1 << 2
     _FLAG_COMPRESSED = 1 << 3
     _FLAG_TEXT = 1 << 4
+    _FLAG_BYTE_ARRAY = 1 << 5
 
     _SERVER_RETRIES = 10  # how many times to try finding a free server.
 
@@ -165,7 +166,8 @@ class Client(threading.local):
                  pload=None, pid=None,
                  server_max_key_length=None, server_max_value_length=None,
                  dead_retry=_DEAD_RETRY, socket_timeout=_SOCKET_TIMEOUT,
-                 cache_cas=False, flush_on_reconnect=0, check_keys=True):
+                 cache_cas=False, flush_on_reconnect=0, check_keys=True,
+                 flags_to_overwrite={}):
         """Create a new Client object with the given list of servers.
 
         @param servers: C{servers} is passed to L{set_servers}.
@@ -208,6 +210,10 @@ class Client(threading.local):
         @param check_keys: (default True) If True, the key is checked
         to ensure it is the correct length and composed of the right
         characters.
+        @param flags_to_overwrite: (default {}) A dictionary mapping
+        _FLAG_* values to new values.  This allows compatibility
+        with other memcached clients which have different flags for
+        specific types.
         """
         super(Client, self).__init__()
         self.debug = debug
@@ -242,6 +248,26 @@ class Client(threading.local):
             self.picklerIsKeyword = True
         except TypeError:
             self.picklerIsKeyword = False
+
+        # Allow users to overwrite _FLAG_ with custom values
+        if flags_to_overwrite:
+            if self._FLAG_PICKLE in flags_to_overwrite:
+                self._FLAG_PICKLE = flags_to_overwrite[self._FLAG_PICKLE]
+
+            if self._FLAG_INTEGER in flags_to_overwrite:
+                self._FLAG_INTEGER = flags_to_overwrite[self._FLAG_INTEGER]
+
+            if self._FLAG_LONG in flags_to_overwrite:
+                self._FLAG_LONG = flags_to_overwrite[self._FLAG_LONG]
+
+            if self._FLAG_COMPRESSED in flags_to_overwrite:
+                self._FLAG_COMPRESSED = flags_to_overwrite[self._FLAG_COMPRESSED]
+
+            if self._FLAG_TEXT in flags_to_overwrite:
+                self._FLAG_TEXT = flags_to_overwrite[self._FLAG_TEXT]
+
+            if self._FLAG_BYTE_ARRAY in flags_to_overwrite:
+                self._FLAG_BYTE_ARRAY = flags_to_overwrite[self._FLAG_BYTE_ARRAY]
 
     def _encode_key(self, key):
         if isinstance(key, tuple):
@@ -969,24 +995,27 @@ class Client(threading.local):
         if val_type == six.binary_type:
             pass
         elif val_type == six.text_type:
-            flags |= Client._FLAG_TEXT
+            flags |= self._FLAG_TEXT
             val = val.encode('utf-8')
         elif val_type == int:
-            flags |= Client._FLAG_INTEGER
+            flags |= self._FLAG_INTEGER
             val = '%d' % val
             if six.PY3:
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
         elif six.PY2 and isinstance(val, long):  # noqa: F821
-            flags |= Client._FLAG_LONG
+            flags |= self._FLAG_LONG
             val = str(val)
             if six.PY3:
                 val = val.encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
+        elif isinstance(val, bytearray):
+            flags |= self._FLAG_BYTE_ARRAY
+            val = bytes(val)
         else:
-            flags |= Client._FLAG_PICKLE
+            flags |= self._FLAG_PICKLE
             file = BytesIO()
             if self.picklerIsKeyword:
                 pickler = self.pickler(file, protocol=self.pickleProtocol)
@@ -1005,7 +1034,7 @@ class Client(threading.local):
             # Only retain the result if the compression result is smaller
             # than the original.
             if len(comp_val) < lv:
-                flags |= Client._FLAG_COMPRESSED
+                flags |= self._FLAG_COMPRESSED
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
@@ -1258,22 +1287,22 @@ class Client(threading.local):
         if len(buf) == rlen:
             buf = buf[:-2]  # strip \r\n
 
-        if flags & Client._FLAG_COMPRESSED:
+        if flags & self._FLAG_COMPRESSED:
             buf = self.decompressor(buf)
-            flags &= ~Client._FLAG_COMPRESSED
+            flags &= ~self._FLAG_COMPRESSED
         if flags == 0:
             # Bare bytes
             val = buf
-        elif flags & Client._FLAG_TEXT:
+        elif flags & self._FLAG_TEXT:
             val = buf.decode('utf-8')
-        elif flags & Client._FLAG_INTEGER:
+        elif flags & self._FLAG_INTEGER:
             val = int(buf)
-        elif flags & Client._FLAG_LONG:
+        elif flags & self._FLAG_LONG:
             if six.PY3:
                 val = int(buf)
             else:
                 val = long(buf)  # noqa: F821
-        elif flags & Client._FLAG_PICKLE:
+        elif flags & self._FLAG_PICKLE:
             try:
                 file = BytesIO(buf)
                 unpickler = self.unpickler(file)
@@ -1283,6 +1312,8 @@ class Client(threading.local):
             except Exception as e:
                 self.debuglog('Pickle error: %s\n' % e)
                 return None
+        elif flags & self._FLAG_BYTE_ARRAY:
+            val = bytearray(buf)
         else:
             self.debuglog("unknown flags on get: %x\n" % flags)
             raise ValueError('Unknown flags on get: %x' % flags)
