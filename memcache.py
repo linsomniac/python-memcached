@@ -518,18 +518,36 @@ class Client(threading.local):
                 rc = 0
         return rc
 
-    def delete(self, key, time=None, noreply=False):
+    def delete(self, key, noreply=False):
         '''Deletes a key from the memcache.
 
         @return: Nonzero on success.
-        @param time: number of seconds any subsequent set / update commands
-        should fail. Defaults to None for no delay.
         @param noreply: optional parameter instructs the server to not send the
             reply.
         @rtype: int
         '''
-        return self._deletetouch([b'DELETED', b'NOT_FOUND'], "delete", key,
-                                 time, noreply)
+        key = self._encode_key(key)
+        if self.do_check_key:
+            self.check_key(key)
+        server, key = self._get_server(key)
+        if not server:
+            return 0
+        self._statlog('delete')
+        fullcmd = self._encode_cmd('delete', key, None, noreply)
+
+        try:
+            server.send_cmd(fullcmd)
+            if noreply:
+                return 1
+            line = server.readline()
+            if line and line.strip() in [b'DELETED', b'NOT_FOUND']:
+                return 1
+            self.debuglog('delete expected DELETED or NOT_FOUND, got: %r' % (line,))
+        except socket.error as msg:
+            if isinstance(msg, tuple):
+                msg = msg[1]
+            server.mark_dead(msg)
+        return 0
 
     def touch(self, key, time=0, noreply=False):
         '''Updates the expiration time of a key in memcache.
@@ -544,31 +562,23 @@ class Client(threading.local):
             reply.
         @rtype: int
         '''
-        return self._deletetouch([b'TOUCHED'], "touch", key, time, noreply)
-
-    def _deletetouch(self, expected, cmd, key, time=0, noreply=False):
         key = self._encode_key(key)
         if self.do_check_key:
             self.check_key(key)
         server, key = self._get_server(key)
         if not server:
             return 0
-        self._statlog(cmd)
-        if time is not None:
-            headers = str(time)
-        else:
-            headers = None
-        fullcmd = self._encode_cmd(cmd, key, headers, noreply)
+        self._statlog('touch')
+        fullcmd = self._encode_cmd('touch', key, str(time), noreply)
 
         try:
             server.send_cmd(fullcmd)
             if noreply:
                 return 1
             line = server.readline()
-            if line and line.strip() in expected:
+            if line and line.strip() in [b'TOUCHED']:
                 return 1
-            self.debuglog('%s expected %s, got: %r'
-                          % (cmd, b' or '.join(expected), line))
+            self.debuglog('touch expected TOUCHED, got: %r' % (line,))
         except socket.error as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]

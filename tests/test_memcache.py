@@ -245,7 +245,7 @@ class TestMemcache(unittest.TestCase):
             self.mc.touch('key')
         self.assertEqual(
             output.getvalue(),
-            "MemCached: touch expected %s, got: 'SET'\n" % b'TOUCHED'
+            "MemCached: touch expected %s, got: 'SET'\n" % 'TOUCHED'
         )
 
 
