@@ -58,11 +58,7 @@ import zlib
 
 import six
 
-if six.PY2:
-    # With Python 2, the faster C implementation has to be imported explicitly.
-    import cPickle as pickle
-else:
-    import pickle
+import pickle
 
 
 def cmemcache_hash(key):
@@ -252,12 +248,11 @@ class Client(threading.local):
         return key
 
     def _encode_cmd(self, cmd, key, headers, noreply, *args):
-        cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
+        cmd_bytes = cmd.encode('utf-8')
         fullcmd = [cmd_bytes, b' ', key]
 
         if headers:
-            if six.PY3:
-                headers = headers.encode('utf-8')
+            headers = headers.encode('utf-8')
             fullcmd.append(b' ')
             fullcmd.append(headers)
 
@@ -797,9 +792,7 @@ class Client(threading.local):
                 key = self._encode_key(key)
                 if not isinstance(key, six.binary_type):
                     # set_multi supports int / long keys.
-                    key = str(key)
-                    if six.PY3:
-                        key = key.encode('utf8')
+                    key = str(key).encode('utf8')
                 bytes_orig_key = key
 
                 # Gotta pre-mangle key before hashing to a
@@ -810,9 +803,7 @@ class Client(threading.local):
                 key = self._encode_key(orig_key)
                 if not isinstance(key, six.binary_type):
                     # set_multi supports int / long keys.
-                    key = str(key)
-                    if six.PY3:
-                        key = key.encode('utf8')
+                    key = str(key).encode('utf8')
                 bytes_orig_key = key
                 server, key = self._get_server(key_prefix + key)
 
@@ -971,16 +962,7 @@ class Client(threading.local):
             val = val.encode('utf-8')
         elif val_type == int:
             flags |= Client._FLAG_INTEGER
-            val = '%d' % val
-            if six.PY3:
-                val = val.encode('ascii')
-            # force no attempt to compress this silly string.
-            min_compress_len = 0
-        elif six.PY2 and isinstance(val, long):  # noqa: F821
-            flags |= Client._FLAG_LONG
-            val = str(val)
-            if six.PY3:
-                val = val.encode('ascii')
+            val = ('%d' % val).encode('ascii')
             # force no attempt to compress this silly string.
             min_compress_len = 0
         else:
@@ -1074,7 +1056,7 @@ class Client(threading.local):
             self._statlog(cmd)
 
             try:
-                cmd_bytes = cmd.encode('utf-8') if six.PY3 else cmd
+                cmd_bytes = cmd.encode('utf-8')
                 fullcmd = b''.join((cmd_bytes, b' ', key))
                 server.send_cmd(fullcmd)
                 rkey = flags = rlen = cas_id = None
@@ -1267,10 +1249,7 @@ class Client(threading.local):
         elif flags & Client._FLAG_INTEGER:
             val = int(buf)
         elif flags & Client._FLAG_LONG:
-            if six.PY3:
-                val = int(buf)
-            else:
-                val = long(buf)  # noqa: F821
+            val = int(buf)
         elif flags & Client._FLAG_PICKLE:
             try:
                 file = BytesIO(buf)
