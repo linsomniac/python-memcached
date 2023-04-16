@@ -67,6 +67,8 @@ else:
 
 def cmemcache_hash(key):
     return (((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1
+
+
 serverHashFunction = cmemcache_hash
 
 
@@ -127,7 +129,7 @@ class Client(threading.local):
     @group Integers: incr, decr
     @group Removal: delete, delete_multi
     @sort: __init__, set_servers, forget_dead_hosts, disconnect_all,
-           debuglog,\ set, set_multi, add, replace, get, get_multi,
+           debuglog, set, set_multi, add, replace, get, get_multi,
            incr, decr, delete, delete_multi
     """
     _FLAG_PICKLE = 1 << 0
@@ -323,11 +325,13 @@ class Client(threading.local):
             serverData = {}
             data.append((name, serverData))
             readline = s.readline
-            while 1:
+            while True:
                 line = readline()
-                if not line or line.decode('ascii').strip() == 'END':
+                if line:
+                    line = line.decode('ascii')
+                if not line or line.strip() == 'END':
                     break
-                stats = line.decode('ascii').split(' ', 2)
+                stats = line.split(' ', 2)
                 serverData[stats[1]] = stats[2]
 
         return data
@@ -347,8 +351,10 @@ class Client(threading.local):
             data.append((name, serverData))
             s.send_cmd('stats slabs')
             readline = s.readline
-            while 1:
+            while True:
                 line = readline()
+                if line:
+                    line = line.decode('ascii')
                 if not line or line.strip() == 'END':
                     break
                 item = line.split(' ', 2)
@@ -378,7 +384,7 @@ class Client(threading.local):
             data.append((name, serverData))
             s.send_cmd('stats items')
             readline = s.readline
-            while 1:
+            while True:
                 line = readline()
                 if not line or line.strip() == 'END':
                     break
@@ -1003,8 +1009,7 @@ class Client(threading.local):
                 val = comp_val
 
         #  silently do not store if value length exceeds maximum
-        if (self.server_max_value_length != 0 and
-                len(val) > self.server_max_value_length):
+        if (self.server_max_value_length != 0 and len(val) > self.server_max_value_length):
             return 0
 
         return (flags, len(val), val)
@@ -1300,8 +1305,8 @@ class Client(threading.local):
             key = key[1]
         if key is None:
             raise Client.MemcachedKeyNoneError("Key is None")
-        if key is '':
-            if key_extra_len is 0:
+        if key == '':
+            if key_extra_len == 0:
                 raise Client.MemcachedKeyNoneError("Key is empty")
 
             #  key is empty but there is some other component to key
@@ -1310,8 +1315,7 @@ class Client(threading.local):
         if not isinstance(key, six.binary_type):
             raise Client.MemcachedKeyTypeError("Key must be a binary string")
 
-        if (self.server_max_key_length != 0 and
-                len(key) + key_extra_len > self.server_max_key_length):
+        if (self.server_max_key_length != 0 and len(key) + key_extra_len > self.server_max_key_length):
             raise Client.MemcachedKeyLengthError(
                 "Key length is > %s" % self.server_max_key_length
             )
@@ -1436,12 +1440,15 @@ class _Host(object):
         If "raise_exception" is set, raise _ConnectionDeadError if the
         read fails, otherwise return an empty string.
         """
+        def empty_bytes(_: int) -> bytes:
+            "Fake receiver that returns empty bytes when the socket isn't connected"
+            return b''
+
         buf = self.buffer
         if self.socket:
             recv = self.socket.recv
         else:
-            def recv(*args, **kwargs):
-                return b''
+            recv = empty_bytes
 
         while True:
             index = buf.find(b'\r\n')
@@ -1463,11 +1470,8 @@ class _Host(object):
     def expect(self, text, raise_exception=False):
         line = self.readline(raise_exception)
         if self.debug and line != text:
-            if six.PY3:
-                text = text.decode('utf8')
-                log_line = line.decode('utf8', 'replace')
-            else:
-                log_line = line
+            text = text.decode('utf8')
+            log_line = line.decode('utf8', 'replace')
             self.debuglog("while expecting %r, got unexpected response %r"
                           % (text, log_line))
         return line
