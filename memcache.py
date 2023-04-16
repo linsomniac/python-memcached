@@ -806,8 +806,6 @@ class Client(threading.local):
                 # server. Returns the mangled key.
                 server, key = self._get_server(
                     (serverhash, key_prefix + key))
-
-                orig_key = orig_key[1]
             else:
                 key = self._encode_key(orig_key)
                 if not isinstance(key, six.binary_type):
