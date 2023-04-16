@@ -364,7 +364,7 @@ class Client(threading.local):
                     serverData[slab[0]][slab[1]] = item[2]
         return data
 
-    def quit_all(self):
+    def quit_all(self) -> None:
         '''Send a "quit" command to all servers and wait for the connection to close.'''
         for s in self.servers:
             s.quit()
@@ -1480,10 +1480,9 @@ class _Host(object):
         self.buffer = buf[rlen:]
         return buf[:rlen]
 
-    def quit(self):
+    def quit(self) -> None:
         '''Send a "quit" command to remote server and wait for connection to close.'''
         if self.socket:
-            # Using self.send_cmd, so no need for '\r\n'.
             self.send_cmd('quit')
 
             # We can't close the local socket until the remote end processes the quit

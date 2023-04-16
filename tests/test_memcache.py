@@ -48,6 +48,9 @@ class TestMemcache(unittest.TestCase):
         self.check_setget("an_integer", 42)
         self.check_setget("an_integer_2", 42, noreply=True)
 
+    def test_quit_all(self):
+        self.mc.quit_all()
+
     def test_delete(self):
         self.check_setget("long", int(1 << 30))
         result = self.mc.delete("long")
