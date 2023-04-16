@@ -66,7 +66,7 @@ else:
 
 
 def cmemcache_hash(key):
-    return (((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff) or 1
+    return ((binascii.crc32(key) & 0xffffffff) >> 16) & 0x7fff
 
 
 serverHashFunction = cmemcache_hash
