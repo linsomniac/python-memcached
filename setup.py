@@ -14,7 +14,7 @@ setup(
     author="Evan Martin",
     author_email="martine@danga.com",
     maintainer="Sean Reifschneider",
-    maintainer_email="jafo@tummy.com",
+    maintainer_email="jafo00@gmail.com",
     url="https://github.com/linsomniac/python-memcached",
     download_url="https://github.com/linsomniac/python-memcached/releases/download/{0}/python-memcached-{0}.tar.gz".format(version), # noqa
     py_modules=["memcache"],
