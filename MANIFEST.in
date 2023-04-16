@@ -4,6 +4,7 @@ include *.txt
 
 include ChangeLog
 include MakeFile
+include PSF.LICENSE
 
 global-exclude *.pyc
 global-exclude .gitignore
