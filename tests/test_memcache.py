@@ -4,7 +4,10 @@ from __future__ import print_function
 import unittest
 import zlib
 
-import mock
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
 
 from memcache import Client, _Host, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 from .utils import captured_stderr
@@ -45,11 +48,28 @@ class TestMemcache(unittest.TestCase):
         self.check_setget("an_integer", 42)
         self.check_setget("an_integer_2", 42, noreply=True)
 
+    def test_quit_all(self):
+        self.mc.quit_all()
+
     def test_delete(self):
         self.check_setget("long", int(1 << 30))
         result = self.mc.delete("long")
         self.assertEqual(result, True)
         self.assertEqual(self.mc.get("long"), None)
+
+    def test_default(self):
+        key = "default"
+        default = object()
+        result = self.mc.get(key, default=default)
+        self.assertEqual(result, default)
+
+        self.mc.set("default", None)
+        result = self.mc.get(key, default=default)
+        self.assertIsNone(result)
+
+        self.mc.set("default", 123)
+        result = self.mc.get(key, default=default)
+        self.assertEqual(result, 123)
 
     @mock.patch.object(_Host, 'send_cmd')
     @mock.patch.object(_Host, 'readline')
@@ -228,7 +248,7 @@ class TestMemcache(unittest.TestCase):
             self.mc.touch('key')
         self.assertEqual(
             output.getvalue(),
-            "MemCached: touch expected %s, got: 'SET'\n" % b'TOUCHED'
+            "MemCached: touch expected %s, got: 'SET'\n" % 'TOUCHED'
         )
 
 
