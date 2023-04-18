@@ -252,5 +252,32 @@ class TestMemcache(unittest.TestCase):
         )
 
 
+class TestMemcacheEncoder(unittest.TestCase):
+    def setUp(self):
+        # TODO(): unix socket server stuff
+        servers = ["127.0.0.1:11211"]
+        self.mc = Client(servers, debug=1, key_encoder=self.encoder)
+
+    def tearDown(self):
+        self.mc.flush_all()
+        self.mc.disconnect_all()
+
+    def encoder(self, key):
+        return key.lower()
+
+    def check_setget(self, key, val, noreply=False):
+        self.mc.set(key, val, noreply=noreply)
+        newval = self.mc.get(key)
+        self.assertEqual(newval, val)
+
+    def test_setget(self):
+        self.check_setget("a_string", "some random string")
+        self.check_setget("A_String2", "some random string")
+        self.check_setget("an_integer", 42)
+        self.assertEqual("some random string", self.mc.get("A_String"))
+        self.assertEqual("some random string", self.mc.get("a_sTRing2"))
+        self.assertEqual(42, self.mc.get("An_Integer"))
+
+
 if __name__ == '__main__':
     unittest.main()
