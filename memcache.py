@@ -48,6 +48,7 @@ More detailed documentation is available in the L{Client} class.
 from __future__ import print_function
 
 import binascii
+from datetime import timedelta
 from io import BytesIO
 import re
 import socket
@@ -725,7 +726,7 @@ class Client(threading.local):
         expire, either as a delta number of seconds, or an absolute
         unix time-since-the-epoch value. See the memcached protocol
         docs section "Storage Commands" for more info on <exptime>. We
-        default to 0 == cache forever.
+        default to 0 == cache forever. Optionnaly now accepts a timedelta.
 
         @param min_compress_len: The threshold length to kick in
         auto-compression of the value using the compressor
@@ -740,6 +741,8 @@ class Client(threading.local):
         @param noreply: optional parameter instructs the server to not
         send the reply.
         '''
+        if isinstance(time, timedelta):
+            time = int(time.total_seconds())
         return self._set("set", key, val, time, min_compress_len, noreply)
 
     def cas(self, key, val, time=0, min_compress_len=0, noreply=False):
@@ -1432,15 +1435,12 @@ class _Host(object):
         If "raise_exception" is set, raise _ConnectionDeadError if the
         read fails, otherwise return an empty string.
         """
-        def empty_bytes(_: int) -> bytes:
-            "Fake receiver that returns empty bytes when the socket isn't connected"
-            return b''
-
         buf = self.buffer
         if self.socket:
             recv = self.socket.recv
         else:
-            recv = empty_bytes
+            def recv(bufsize):
+                return b''
 
         while True:
             index = buf.find(b'\r\n')

@@ -3,6 +3,7 @@
 from setuptools.depends import get_module_constant
 from setuptools import setup  # noqa
 
+dl_url = "https://github.com/linsomniac/python-memcached/releases/download/{0}/python-memcached-{0}.tar.gz"
 
 version = get_module_constant('memcache', '__version__')
 setup(
