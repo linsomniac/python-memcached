@@ -8,6 +8,11 @@ daemon.  It is the client side software which allows storing values
 in one or more, possibly remote, memcached servers.  Search google for
 memcached for more information.
 
+This library is stable and largely in maintenance mode.  Another library that
+is getting more active enhancements is
+[pymemcache](https://pypi.org/project/pymemcache/) and they have links and a
+good set of comparisons between them on their page.
+
 This package was originally written by Evan Martin of Danga.  Please do
 not contact Evan about maintenance.  Sean Reifschneider of tummy.com,
 ltd. has taken over maintenance of it.
