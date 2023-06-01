@@ -45,7 +45,6 @@ More detailed documentation is available in the L{Client} class.
 
 """
 
-from __future__ import print_function
 
 import binascii
 from datetime import timedelta
@@ -56,8 +55,6 @@ import sys
 import threading
 import time
 import zlib
-
-import six
 
 import pickle
 
@@ -211,7 +208,7 @@ class Client(threading.local):
         be expected to take one parameter (the key) and return a new encoded
         key as a result.
         """
-        super(Client, self).__init__()
+        super().__init__()
         self.debug = debug
         self.dead_retry = dead_retry
         self.socket_timeout = socket_timeout
@@ -251,9 +248,9 @@ class Client(threading.local):
 
     def _encode_key(self, key):
         if isinstance(key, tuple):
-            if isinstance(key[1], six.text_type):
+            if isinstance(key[1], str):
                 return (key[0], key[1].encode('utf8'))
-        elif isinstance(key, six.text_type):
+        elif isinstance(key, str):
             return key.encode('utf8')
         return key
 
@@ -318,11 +315,11 @@ class Client(threading.local):
             if not s.connect():
                 continue
             if s.family == socket.AF_INET:
-                name = '%s:%s (%s)' % (s.ip, s.port, s.weight)
+                name = '{}:{} ({})'.format(s.ip, s.port, s.weight)
             elif s.family == socket.AF_INET6:
-                name = '[%s]:%s (%s)' % (s.ip, s.port, s.weight)
+                name = '[{}]:{} ({})'.format(s.ip, s.port, s.weight)
             else:
-                name = 'unix:%s (%s)' % (s.address, s.weight)
+                name = 'unix:{} ({})'.format(s.address, s.weight)
             if not stat_args:
                 s.send_cmd('stats')
             else:
@@ -347,11 +344,11 @@ class Client(threading.local):
             if not s.connect():
                 continue
             if s.family == socket.AF_INET:
-                name = '%s:%s (%s)' % (s.ip, s.port, s.weight)
+                name = '{}:{} ({})'.format(s.ip, s.port, s.weight)
             elif s.family == socket.AF_INET6:
-                name = '[%s]:%s (%s)' % (s.ip, s.port, s.weight)
+                name = '[{}]:{} ({})'.format(s.ip, s.port, s.weight)
             else:
-                name = 'unix:%s (%s)' % (s.address, s.weight)
+                name = 'unix:{} ({})'.format(s.address, s.weight)
             serverData = {}
             data.append((name, serverData))
             s.send_cmd('stats slabs')
@@ -385,11 +382,11 @@ class Client(threading.local):
             if not s.connect():
                 continue
             if s.family == socket.AF_INET:
-                name = '%s:%s (%s)' % (s.ip, s.port, s.weight)
+                name = '{}:{} ({})'.format(s.ip, s.port, s.weight)
             elif s.family == socket.AF_INET6:
-                name = '[%s]:%s (%s)' % (s.ip, s.port, s.weight)
+                name = '[{}]:{} ({})'.format(s.ip, s.port, s.weight)
             else:
-                name = 'unix:%s (%s)' % (s.address, s.weight)
+                name = 'unix:{} ({})'.format(s.address, s.weight)
             serverData = {}
             data.append((name, serverData))
             s.send_cmd('stats items')
@@ -450,7 +447,7 @@ class Client(threading.local):
                 # print("(using server %s)" % server,)
                 return server, key
             serverhash = str(serverhash) + str(i)
-            if isinstance(serverhash, six.text_type):
+            if isinstance(serverhash, str):
                 serverhash = serverhash.encode('ascii')
             serverhash = serverHashFunction(serverhash)
         return None, None
@@ -495,7 +492,7 @@ class Client(threading.local):
         dead_servers = []
 
         rc = 1
-        for server in six.iterkeys(server_keys):
+        for server in server_keys.keys():
             bigcmd = []
             write = bigcmd.append
             if time is not None:
@@ -507,7 +504,7 @@ class Client(threading.local):
                 write(cmd)
             try:
                 server.send_cmds(b''.join(bigcmd))
-            except socket.error as msg:
+            except OSError as msg:
                 rc = 0
                 if isinstance(msg, tuple):
                     msg = msg[1]
@@ -522,11 +519,11 @@ class Client(threading.local):
         for server in dead_servers:
             del server_keys[server]
 
-        for server, keys in six.iteritems(server_keys):
+        for server, keys in server_keys.items():
             try:
                 for key in keys:
                     server.expect(b"DELETED")
-            except socket.error as msg:
+            except OSError as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -557,8 +554,8 @@ class Client(threading.local):
             line = server.readline()
             if line and line.strip() in [b'DELETED', b'NOT_FOUND']:
                 return 1
-            self.debuglog('delete expected DELETED or NOT_FOUND, got: %r' % (line,))
-        except socket.error as msg:
+            self.debuglog('delete expected DELETED or NOT_FOUND, got: {!r}'.format(line))
+        except OSError as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
             server.mark_dead(msg)
@@ -593,8 +590,8 @@ class Client(threading.local):
             line = server.readline()
             if line and line.strip() in [b'TOUCHED']:
                 return 1
-            self.debuglog('touch expected TOUCHED, got: %r' % (line,))
-        except socket.error as msg:
+            self.debuglog('touch expected TOUCHED, got: {!r}'.format(line))
+        except OSError as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
             server.mark_dead(msg)
@@ -668,7 +665,7 @@ class Client(threading.local):
             if line is None or line.strip() == b'NOT_FOUND':
                 return None
             return int(line)
-        except socket.error as msg:
+        except OSError as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
             server.mark_dead(msg)
@@ -817,7 +814,7 @@ class Client(threading.local):
                 serverhash, key = orig_key
 
                 key = self._encode_key(self.key_encoder(key))
-                if not isinstance(key, six.binary_type):
+                if not isinstance(key, bytes):
                     # set_multi supports int / long keys.
                     key = str(key).encode('utf8')
                 bytes_orig_key = key
@@ -828,7 +825,7 @@ class Client(threading.local):
                     (serverhash, key_prefix + key))
             else:
                 key = self._encode_key(self.key_encoder(orig_key))
-                if not isinstance(key, six.binary_type):
+                if not isinstance(key, bytes):
                     # set_multi supports int / long keys.
                     key = str(key).encode('utf8')
                 bytes_orig_key = key
@@ -915,13 +912,13 @@ class Client(threading.local):
         self._statlog('set_multi')
 
         server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
-            six.iterkeys(mapping), key_prefix)
+            mapping.keys(), key_prefix)
 
         # send out all requests on each server before reading anything
         dead_servers = []
         notstored = []  # original keys.
 
-        for server in six.iterkeys(server_keys):
+        for server in server_keys.keys():
             bigcmd = []
             write = bigcmd.append
             try:
@@ -939,7 +936,7 @@ class Client(threading.local):
                     else:
                         notstored.append(prefixed_to_orig_key[key])
                 server.send_cmds(b''.join(bigcmd))
-            except socket.error as msg:
+            except OSError as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -957,7 +954,7 @@ class Client(threading.local):
         if not server_keys:
             return list(mapping.keys())
 
-        for server, keys in six.iteritems(server_keys):
+        for server, keys in server_keys.items():
             try:
                 for key in keys:
                     if server.readline() == b'STORED':
@@ -965,7 +962,7 @@ class Client(threading.local):
                     else:
                         # un-mangle.
                         notstored.append(prefixed_to_orig_key[key])
-            except (_Error, socket.error) as msg:
+            except (_Error, OSError) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -982,9 +979,9 @@ class Client(threading.local):
         # subclasses of native types (such as markup-safe strings) are pickled
         # and restored as instances of the correct class.
         val_type = type(val)
-        if val_type == six.binary_type:
+        if val_type == bytes:
             pass
-        elif val_type == six.text_type:
+        elif val_type == str:
             flags |= Client._FLAG_TEXT
             val = val.encode('utf-8')
         elif val_type == int:
@@ -1054,7 +1051,7 @@ class Client(threading.local):
                 if noreply:
                     return True
                 return server.expect(b"STORED", raise_exception=True) == b"STORED"
-            except socket.error as msg:
+            except OSError as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -1067,7 +1064,7 @@ class Client(threading.local):
             try:
                 if server._get_socket():
                     return _unsafe_set()
-            except (_ConnectionDeadError, socket.error) as msg:
+            except (_ConnectionDeadError, OSError) as msg:
                 server.mark_dead(msg)
             return 0
 
@@ -1105,7 +1102,7 @@ class Client(threading.local):
                     value = self._recv_value(server, flags, rlen)
                 finally:
                     server.expect(b"END", raise_exception=True)
-            except (_Error, socket.error) as msg:
+            except (_Error, OSError) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -1121,7 +1118,7 @@ class Client(threading.local):
                 if server.connect():
                     return _unsafe_get()
                 return None
-            except (_ConnectionDeadError, socket.error) as msg:
+            except (_ConnectionDeadError, OSError) as msg:
                 server.mark_dead(msg)
             return None
 
@@ -1201,11 +1198,11 @@ class Client(threading.local):
 
         # send out all requests on each server before reading anything
         dead_servers = []
-        for server in six.iterkeys(server_keys):
+        for server in server_keys.keys():
             try:
                 fullcmd = b"get " + b" ".join(server_keys[server])
                 server.send_cmd(fullcmd)
-            except socket.error as msg:
+            except OSError as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -1216,7 +1213,7 @@ class Client(threading.local):
             del server_keys[server]
 
         retvals = {}
-        for server in six.iterkeys(server_keys):
+        for server in server_keys.keys():
             try:
                 line = server.readline()
                 while line and line != b'END':
@@ -1227,7 +1224,7 @@ class Client(threading.local):
                         # un-prefix returned key.
                         retvals[prefixed_to_orig_key[rkey]] = val
                     line = server.readline()
-            except (_Error, socket.error) as msg:
+            except (_Error, OSError) as msg:
                 if isinstance(msg, tuple):
                     msg = msg[1]
                 server.mark_dead(msg)
@@ -1316,7 +1313,7 @@ class Client(threading.local):
             #  key is empty but there is some other component to key
             return
 
-        if not isinstance(key, six.binary_type):
+        if not isinstance(key, bytes):
             raise Client.MemcachedKeyTypeError("Key must be a binary string")
 
         if (self.server_max_key_length != 0 and len(key) + key_extra_len > self.server_max_key_length):
@@ -1328,7 +1325,7 @@ class Client(threading.local):
                 "Control/space characters not allowed (key=%r)" % key)
 
 
-class _Host(object):
+class _Host:
 
     def __init__(self, host, debug=0, dead_retry=_DEAD_RETRY,
                  socket_timeout=_SOCKET_TIMEOUT, flush_on_reconnect=0):
@@ -1391,7 +1388,7 @@ class _Host(object):
         return 0
 
     def mark_dead(self, reason):
-        self.debuglog("MemCache: %s: %s.  Marking dead." % (self, reason))
+        self.debuglog("MemCache: {}: {}.  Marking dead.".format(self, reason))
         self.deaduntil = time.time() + self.dead_retry
         if self.flush_on_reconnect:
             self.flush_on_next_connect = 1
@@ -1410,7 +1407,7 @@ class _Host(object):
         except socket.timeout as msg:
             self.mark_dead("connect: %s" % msg)
             return None
-        except socket.error as msg:
+        except OSError as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
             self.mark_dead("connect: %s" % msg)
@@ -1428,13 +1425,13 @@ class _Host(object):
             self.socket = None
 
     def send_cmd(self, cmd):
-        if isinstance(cmd, six.text_type):
+        if isinstance(cmd, str):
             cmd = cmd.encode('utf8')
         self.socket.sendall(cmd + b'\r\n')
 
     def send_cmds(self, cmds):
         """cmds already has trailing \r\n's applied."""
-        if isinstance(cmds, six.text_type):
+        if isinstance(cmds, str):
             cmds = cmds.encode('utf8')
         self.socket.sendall(cmds)
 
@@ -1519,7 +1516,7 @@ class _Host(object):
         elif self.family == socket.AF_INET6:
             return "inet6:[%s]:%d%s" % (self.address[0], self.address[1], d)
         else:
-            return "unix:%s%s" % (self.address, d)
+            return "unix:{}{}".format(self.address, d)
 
 
 def _doctest():
@@ -1530,7 +1527,7 @@ def _doctest():
     globs = {"mc": mc}
     results = doctest.testmod(memcache, globs=globs)
     mc.disconnect_all()
-    print("Doctests: %s" % (results,))
+    print("Doctests: {}".format(results))
     if results.failed:
         sys.exit(1)
 
