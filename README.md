@@ -30,7 +30,7 @@ For changes prior to 2013-03-26, see the old Launchpad repository at:
 Test patches locally and easily by running tox:
 
     pip install tox
-    tox -e py27
+    tox -e py312
 
 Test for style by running tox:
 
