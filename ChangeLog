@@ -1,4 +1,59 @@
+Sun, 24 Dec 2024 22:33:47 -0700  Sean Reifschneider  <jafo00@gmail.com>
+
+   *  1.60 release.
+
+   *  Allow to use a datetime.timedelta parameter for Client.set
+	    (PR from Theo Massard) 
+
+   *  Fix cmemcahe_hash 0 values being translated to 1 (PR from Chow Loong Jin)
+
+   *  Fix tuple key support in multi methods  (PR from Sergii Mikhtoniuk) #154 
+
+   *  Add support for default value in get (PR from Jakub Szafrański)
+
+   *  test_memcache.py: try import unittest.mock (PR from Tim Orling)
+
+   *  Use == as suggested by Python 3.8 (PR from @za)
+
+   *  Decoding in slab funcs, replacing "1" with "True" in while. #175 
+
+   *  Tell PyPI to parse README as markdown (PR from @MartinThoma) #168 
+
+   *  test_memcache.py: try import unittest.mock (PR from @moto-timo) #172 
+
+   *  Removed Python 2.7 from setup.cfg, adding 3.8-3.12
+
+   *  Add support for default value in get() (PR from @samupl) #158 
+
+   *  Fix tuple key support in multi methods (regression in 1.55).
+	    (PR from @sergiimk) #155 
+
+   *  Fix cmemcahe_hash 0 values being translated to 1.  For example "ob"
+	    would hash to 0 and then get converted to 1.  Looks like this dated
+			back to 2009, the original code we imported for that hash function.
+			(PR from @hyperair) #152 
+
+   *  Removing six.PY2/3 conditionals
+
+   *  Removing "time" from delete and making expiry mandatory in touch.
+	    (port of @erankor's PR in #30 )
+
+   *  Added quit() method.  This method sends the 'quit' command to the
+	    servers and then closes the connections, reducing the number of
+			TIME_WAIT sockets hanging around the OS. (PR from @userrl) #15 
+
+   *  Allow to use a datetime.timedelta parameter for Client.set (PR from @tbobm) #146 
+
+   *  Allow keys to be encoded before use. (Port of PR in #52 from @harlowja)
+
+   *  Removing historic python 2to3 code and deprecated socket.error (for
+	    OSError). (PR from @pgajdos) #186 
+
+   *  Updating to the latest PSF license
+
 Fri, 15 Dec 2018 09:02:05 -0700  Sean Reifschneider  <jafo00@gmail.com>
+
+   *  1.59 release.
 
    *  Added testing for Python 3.5 and 3.6 (PR from Tim Graham) #110, #131
 
