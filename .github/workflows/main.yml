@@ -17,8 +17,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Set up Memcached
         run: |
-          apt update
-          apt -y install memcached
+          sudo apt update
+          sudo apt -y install memcached
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
