@@ -1,0 +1,41 @@
+name: Release
+
+#  See: https://github.com/pypa/gh-action-pypi-publish
+
+# Triggered from github UI
+#on: ["workflow_dispatch"]
+on:
+  release:
+    types: [released]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    - name: Extract version from tag
+      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+    - name: Update version in memcache.py
+      run: |
+        sed -ri 's/^(\s*__version__\s*=\s*).*$/\1"'"${RELEASE_VERSION}"'"/' memcache.py
+    - name: Update version in PKG-INFO
+      run: |
+        sed -ri 's/^(\sVersion:\s*).*$/\1"'"${RELEASE_VERSION}"'"/' PKG-INFO
+    - name: Build
+      run: pipx run build .
+    #  This requires Trusted Publishing be set up at PyPi
+    #  Go to <Project> -> Manage -> Publishing and enter this repos info
+    #  Info: [Owner] / [Repo name] / release.yml / [BLANK]
+    - name: Publish
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip-existing: true
