@@ -1,6 +1,3 @@
-[![Build
-Status](https://travis-ci.org/linsomniac/python-memcached.svg)](https://travis-ci.org/linsomniac/python-memcached)
-
 ## Overview
 
 This software is a 100% Python interface to the memcached memory cache
