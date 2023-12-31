@@ -1,3 +1,5 @@
+   *  Removed obsolete configuration for Travis CI.  (Nick Pope PR #189)
+
 Thu, 28 Dec 2023 19:24:00 -0700  Sean Reifschneider  <jafo00@gmail.com>
 
    *  1.61 release.
