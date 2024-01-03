@@ -56,6 +56,8 @@ class TestMemcache(unittest.TestCase):
         result = self.mc.delete("long")
         self.assertEqual(result, True)
         self.assertEqual(self.mc.get("long"), None)
+        result = self.mc.delete("<missing>")
+        self.assertEqual(result, False)
 
     def test_default(self):
         key = "default"

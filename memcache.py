@@ -552,9 +552,9 @@ class Client(threading.local):
             if noreply:
                 return 1
             line = server.readline()
-            if line and line.strip() in [b'DELETED', b'NOT_FOUND']:
+            if line and line.strip() == b'DELETED':
                 return 1
-            self.debuglog('delete expected DELETED or NOT_FOUND, got: {!r}'.format(line))
+            self.debuglog('delete expected DELETED, got: {!r}'.format(line))
         except OSError as msg:
             if isinstance(msg, tuple):
                 msg = msg[1]
