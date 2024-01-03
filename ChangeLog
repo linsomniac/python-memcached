@@ -1,3 +1,6 @@
+	 *  delete() return value now is 1 for "DELETED" and 0 for "NOT_FOUND" or server error.
+      (Nick Pope PR #190)
+
    *  Removed obsolete configuration for Travis CI.  (Nick Pope PR #189)
 
 Thu, 28 Dec 2023 19:24:00 -0700  Sean Reifschneider  <jafo00@gmail.com>
