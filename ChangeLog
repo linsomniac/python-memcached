@@ -1,3 +1,5 @@
+Sun, 14 Jan 2024 08:49:00 -0700  Sean Reifschneider  <jafo00@gmail.com>
+
 	 *  delete() return value now is 1 for "DELETED" and 0 for "NOT_FOUND" or server error.
       (Nick Pope PR #190)
 
