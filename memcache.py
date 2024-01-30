@@ -728,11 +728,11 @@ class Client(threading.local):
         @return: Nonzero on success.
         @rtype: int
 
-        @param time: Tells memcached the time which this value should
+        @param time: Tells memcached the time at which this value should
         expire, either as a delta number of seconds, or an absolute
         unix time-since-the-epoch value. See the memcached protocol
         docs section "Storage Commands" for more info on <exptime>. We
-        default to 0 == cache forever. Optionnaly now accepts a timedelta.
+        default to 0 == cache forever. Optionally now accepts a timedelta.
 
         @param min_compress_len: The threshold length to kick in
         auto-compression of the value using the compressor
