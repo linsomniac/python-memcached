@@ -373,7 +373,7 @@ Sat, 31 May 2008 02:09:17 -0600  Sean Reifschneider  <jafo@tummy.com>
 
    *  Paul Hummer set up a Launchpad project which I'm going to start using
       to track patches and allow users to set up their own bzr branches and
-      manage marging in the upstream patches with their own.
+      manage merging in the upstream patches with their own.
 
          https://launchpad.net/python-memcached
 
