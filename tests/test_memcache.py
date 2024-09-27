@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import socket
 import unittest
 import zlib
 
@@ -279,6 +280,53 @@ class TestMemcacheEncoder(unittest.TestCase):
         self.assertEqual("some random string", self.mc.get("A_String"))
         self.assertEqual("some random string", self.mc.get("a_sTRing2"))
         self.assertEqual(42, self.mc.get("An_Integer"))
+
+
+class TestMemcacheMarkDead(unittest.TestCase):
+
+    def setUp(self):
+        self.status = locals()
+        self.address = ("127.0.0.1", 11213)
+        self._start_stub_server()
+        self.client = Client(["127.0.0.1:11213"], debug=1)
+
+    def tearDown(self):
+        self._stop_stub_server()
+
+    def _start_stub_server(self):
+        # setup stub server
+        stub_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        stub_socket.bind(self.address)
+        stub_socket.listen(1)
+        self.stub_socket = stub_socket
+
+    def _stop_stub_server(self):
+        self.stub_socket.close()
+
+    def test_mark_server_dead(self):
+        mc_host = self.client._get_server('foo'.encode('utf8'))[0]
+        client_socket = mc_host._get_socket()
+
+        # make sure the server is not marked dead
+        self.assertEqual(0, mc_host._check_dead())
+
+        # stop the stub server
+        self._stop_stub_server()
+
+        # host is not yet marked as dead
+        self.assertEqual(0, mc_host._check_dead())
+
+        # create a new stub socket again
+        self._start_stub_server()
+
+        # The client will try to re-use the old socket and if it fails
+        # then should re-establish a new connection
+        # so the socket must be a new one
+        new_client_socket = mc_host._get_socket(reconnect=True)
+        self.assertNotEqual(new_client_socket, client_socket)
+
+        # server is not marked dead, because connection succeeded
+        self.assertEqual(0, mc_host._check_dead())
 
 
 if __name__ == '__main__':
