@@ -917,6 +917,7 @@ class Client(threading.local):
         # send out all requests on each server before reading anything
         dead_servers = []
         notstored = []  # original keys.
+        has_valid_content = False
 
         for server in server_keys.keys():
             bigcmd = []
@@ -933,6 +934,7 @@ class Client(threading.local):
                                                    noreply,
                                                    b'\r\n', val, b'\r\n')
                         write(fullcmd)
+                        has_valid_content = True
                     else:
                         notstored.append(prefixed_to_orig_key[key])
                 server.send_cmds(b''.join(bigcmd))
@@ -945,6 +947,9 @@ class Client(threading.local):
         # if noreply, just return early
         if noreply:
             return notstored
+
+        if not has_valid_content:
+            return mapping.keys()
 
         # if any servers died on the way, don't expect them to respond.
         for server in dead_servers:
