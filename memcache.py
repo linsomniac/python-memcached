@@ -914,6 +914,9 @@ class Client(threading.local):
         server_keys, prefixed_to_orig_key = self._map_and_prefix_keys(
             mapping.keys(), key_prefix)
 
+        mapping = dict([(k[1] if type(k) is tuple else k, v)
+                        for k, v in six.iteritems(mapping)])
+
         # send out all requests on each server before reading anything
         dead_servers = []
         notstored = []  # original keys.
