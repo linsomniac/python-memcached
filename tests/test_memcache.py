@@ -1,10 +1,7 @@
 import unittest
 import zlib
 
-try:
-    import unittest.mock as mock
-except ImportError:
-    from unittest import mock
+from unittest import mock
 
 from memcache import Client, _Host, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENGTH  # noqa: H301
 from .utils import captured_stderr

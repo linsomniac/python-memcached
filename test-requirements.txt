@@ -1,4 +1,3 @@
 pytest
 coverage
 hacking
-mock
