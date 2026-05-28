@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 
+import re
 from setuptools import setup  # noqa
-from setuptools.depends import get_module_constant
 
 dl_url = "https://github.com/linsomniac/python-memcached/releases/download/{0}/python-memcached-{0}.tar.gz"
 
-version = get_module_constant("memcache", "__version__")
+version = re.search(
+    r'^__version__ = ["\']([^"\']+)["\']',
+    open("memcache.py", encoding="utf-8").read(),
+    re.M,
+).group(1)
 setup(
     name="python-memcached",
     version=version,
@@ -32,10 +36,10 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
     ],
 )
