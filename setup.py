@@ -14,7 +14,7 @@ setup(
     name="python-memcached",
     version=version,
     description="Pure python memcached client",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="Evan Martin",
     author_email="martine@danga.com",
@@ -25,7 +25,7 @@ setup(
         version
     ),  # noqa
     py_modules=["memcache"],
-    install_requires=open("requirements.txt").read().split(),
+    install_requires=open("requirements.txt", encoding="utf-8").read().split(),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
