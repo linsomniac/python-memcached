@@ -506,8 +506,6 @@ class Client(threading.local):
                 server.send_cmds(b''.join(bigcmd))
             except OSError as msg:
                 rc = 0
-                if isinstance(msg, tuple):
-                    msg = msg[1]
                 server.mark_dead(msg)
                 dead_servers.append(server)
 
@@ -524,8 +522,6 @@ class Client(threading.local):
                 for key in keys:
                     server.expect(b"DELETED")
             except OSError as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
                 server.mark_dead(msg)
                 rc = 0
         return rc
@@ -556,8 +552,6 @@ class Client(threading.local):
                 return 1
             self.debuglog(f'delete expected DELETED, got: {line!r}')
         except OSError as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
             server.mark_dead(msg)
         return 0
 
@@ -592,8 +586,6 @@ class Client(threading.local):
                 return 1
             self.debuglog(f'touch expected TOUCHED, got: {line!r}')
         except OSError as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
             server.mark_dead(msg)
         return 0
 
@@ -666,8 +658,6 @@ class Client(threading.local):
                 return None
             return int(line)
         except OSError as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
             server.mark_dead(msg)
             return None
 
@@ -937,8 +927,6 @@ class Client(threading.local):
                         notstored.append(prefixed_to_orig_key[key])
                 server.send_cmds(b''.join(bigcmd))
             except OSError as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
                 server.mark_dead(msg)
                 dead_servers.append(server)
 
@@ -963,8 +951,6 @@ class Client(threading.local):
                         # un-mangle.
                         notstored.append(prefixed_to_orig_key[key])
             except (_Error, OSError) as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
                 server.mark_dead(msg)
         return notstored
 
@@ -1052,8 +1038,6 @@ class Client(threading.local):
                     return True
                 return server.expect(b"STORED", raise_exception=True) == b"STORED"
             except OSError as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
                 server.mark_dead(msg)
             return 0
 
@@ -1103,8 +1087,6 @@ class Client(threading.local):
                 finally:
                     server.expect(b"END", raise_exception=True)
             except (_Error, OSError) as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
                 server.mark_dead(msg)
                 return None
 
@@ -1203,8 +1185,6 @@ class Client(threading.local):
                 fullcmd = b"get " + b" ".join(server_keys[server])
                 server.send_cmd(fullcmd)
             except OSError as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
                 server.mark_dead(msg)
                 dead_servers.append(server)
 
@@ -1225,8 +1205,6 @@ class Client(threading.local):
                         retvals[prefixed_to_orig_key[rkey]] = val
                     line = server.readline()
             except (_Error, OSError) as msg:
-                if isinstance(msg, tuple):
-                    msg = msg[1]
                 server.mark_dead(msg)
         return retvals
 
@@ -1408,8 +1386,6 @@ class _Host:
             self.mark_dead("connect: %s" % msg)
             return None
         except OSError as msg:
-            if isinstance(msg, tuple):
-                msg = msg[1]
             self.mark_dead("connect: %s" % msg)
             return None
         self.socket = s
