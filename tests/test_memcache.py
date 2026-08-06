@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import print_function
-
 import unittest
 import zlib
 
@@ -13,7 +10,7 @@ from memcache import Client, _Host, SERVER_MAX_KEY_LENGTH, SERVER_MAX_VALUE_LENG
 from .utils import captured_stderr
 
 
-class FooStruct(object):
+class FooStruct:
 
     def __init__(self):
         self.bar = "baz"
@@ -151,7 +148,7 @@ class TestMemcache(unittest.TestCase):
         self.check_setget("bool", True)
 
     def test_unicode_key(self):
-        s = u'\u4f1a'
+        s = '\u4f1a'
         maxlen = SERVER_MAX_KEY_LENGTH // len(s.encode('utf-8'))
         key = s * maxlen
 
@@ -161,7 +158,7 @@ class TestMemcache(unittest.TestCase):
 
     def test_unicode_value(self):
         key = 'key'
-        value = u'Iñtërnâtiônàlizætiøn2'
+        value = 'Iñtërnâtiônàlizætiøn2'
         self.mc.set(key, value)
         cached_value = self.mc.get(key)
         self.assertEqual(value, cached_value)

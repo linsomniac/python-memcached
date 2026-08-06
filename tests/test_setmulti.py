@@ -7,8 +7,6 @@
 #
 #     https://github.com/linsomniac/python-unittest-skeleton
 
-from __future__ import print_function
-
 import socket
 import sys
 import unittest
@@ -25,7 +23,7 @@ class test_Memcached_Set_Multi(unittest.TestCase):
     def setUp(self):
         RECV_CHUNKS = [b'chunk1']
 
-        class FakeSocket(object):
+        class FakeSocket:
             def __init__(self, *args):
                 if DEBUG:
                     print('FakeSocket{0!r}'.format(args))
