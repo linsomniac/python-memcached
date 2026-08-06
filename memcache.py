@@ -1404,7 +1404,7 @@ class _Host:
             s.settimeout(self.socket_timeout)
         try:
             s.connect(self.address)
-        except socket.timeout as msg:
+        except TimeoutError as msg:
             self.mark_dead("connect: %s" % msg)
             return None
         except OSError as msg:
