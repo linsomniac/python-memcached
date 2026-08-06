@@ -7,6 +7,7 @@
 #
 #     https://github.com/linsomniac/python-unittest-skeleton
 
+
 import socket
 import sys
 import unittest
@@ -26,16 +27,16 @@ class test_Memcached_Set_Multi(unittest.TestCase):
         class FakeSocket:
             def __init__(self, *args):
                 if DEBUG:
-                    print('FakeSocket{0!r}'.format(args))
+                    print(f'FakeSocket{args!r}')
                 self._recv_chunks = list(RECV_CHUNKS)
 
             def connect(self, *args):
                 if DEBUG:
-                    print('FakeSocket.connect{0!r}'.format(args))
+                    print(f'FakeSocket.connect{args!r}')
 
             def sendall(self, *args):
                 if DEBUG:
-                    print('FakeSocket.sendall{0!r}'.format(args))
+                    print(f'FakeSocket.sendall{args!r}')
 
             def recv(self, *args):
                 if self._recv_chunks:
@@ -43,7 +44,7 @@ class test_Memcached_Set_Multi(unittest.TestCase):
                 else:
                     data = ''
                 if DEBUG:
-                    print('FakeSocket.recv{0!r} -> {1!r}'.format(args, data))
+                    print(f'FakeSocket.recv{args!r} -> {data!r}')
                 return data
 
             def close(self):
@@ -65,7 +66,7 @@ class test_Memcached_Set_Multi(unittest.TestCase):
         self.assertIn('connection closed in readline().', log.getvalue())
         self.assertEqual(sorted(bad_keys), ['bar', 'foo'])
         if DEBUG:
-            print('set_multi({0!r}) -> {1!r}'.format(mapping, bad_keys))
+            print(f'set_multi({mapping!r}) -> {bad_keys!r}')
 
 
 if __name__ == '__main__':
