@@ -306,11 +306,11 @@ class Client(threading.local):
             if not s.connect():
                 continue
             if s.family == socket.AF_INET:
-                name = '{}:{} ({})'.format(s.ip, s.port, s.weight)
+                name = f'{s.ip}:{s.port} ({s.weight})'
             elif s.family == socket.AF_INET6:
-                name = '[{}]:{} ({})'.format(s.ip, s.port, s.weight)
+                name = f'[{s.ip}]:{s.port} ({s.weight})'
             else:
-                name = 'unix:{} ({})'.format(s.address, s.weight)
+                name = f'unix:{s.address} ({s.weight})'
             if not stat_args:
                 s.send_cmd('stats')
             else:
@@ -335,11 +335,11 @@ class Client(threading.local):
             if not s.connect():
                 continue
             if s.family == socket.AF_INET:
-                name = '{}:{} ({})'.format(s.ip, s.port, s.weight)
+                name = f'{s.ip}:{s.port} ({s.weight})'
             elif s.family == socket.AF_INET6:
-                name = '[{}]:{} ({})'.format(s.ip, s.port, s.weight)
+                name = f'[{s.ip}]:{s.port} ({s.weight})'
             else:
-                name = 'unix:{} ({})'.format(s.address, s.weight)
+                name = f'unix:{s.address} ({s.weight})'
             serverData = {}
             data.append((name, serverData))
             s.send_cmd('stats slabs')
@@ -373,11 +373,11 @@ class Client(threading.local):
             if not s.connect():
                 continue
             if s.family == socket.AF_INET:
-                name = '{}:{} ({})'.format(s.ip, s.port, s.weight)
+                name = f'{s.ip}:{s.port} ({s.weight})'
             elif s.family == socket.AF_INET6:
-                name = '[{}]:{} ({})'.format(s.ip, s.port, s.weight)
+                name = f'[{s.ip}]:{s.port} ({s.weight})'
             else:
-                name = 'unix:{} ({})'.format(s.address, s.weight)
+                name = f'unix:{s.address} ({s.weight})'
             serverData = {}
             data.append((name, serverData))
             s.send_cmd('stats items')
@@ -541,7 +541,7 @@ class Client(threading.local):
             line = server.readline()
             if line and line.strip() == b'DELETED':
                 return 1
-            self.debuglog('delete expected DELETED, got: {!r}'.format(line))
+            self.debuglog(f'delete expected DELETED, got: {line!r}')
         except OSError as msg:
             server.mark_dead(msg)
         return 0
@@ -575,7 +575,7 @@ class Client(threading.local):
             line = server.readline()
             if line and line.strip() in [b'TOUCHED']:
                 return 1
-            self.debuglog('touch expected TOUCHED, got: {!r}'.format(line))
+            self.debuglog(f'touch expected TOUCHED, got: {line!r}')
         except OSError as msg:
             server.mark_dead(msg)
         return 0
@@ -1354,7 +1354,7 @@ class _Host:
         return 0
 
     def mark_dead(self, reason):
-        self.debuglog("MemCache: {}: {}.  Marking dead.".format(self, reason))
+        self.debuglog(f"MemCache: {self}: {reason}.  Marking dead.")
         self.deaduntil = time.time() + self.dead_retry
         if self.flush_on_reconnect:
             self.flush_on_next_connect = 1
@@ -1480,7 +1480,7 @@ class _Host:
         elif self.family == socket.AF_INET6:
             return "inet6:[%s]:%d%s" % (self.address[0], self.address[1], d)
         else:
-            return "unix:{}{}".format(self.address, d)
+            return f"unix:{self.address}{d}"
 
 
 def _doctest():
@@ -1491,7 +1491,7 @@ def _doctest():
     globs = {"mc": mc}
     results = doctest.testmod(memcache, globs=globs)
     mc.disconnect_all()
-    print("Doctests: {}".format(results))
+    print(f"Doctests: {results}")
     if results.failed:
         sys.exit(1)
 
