@@ -167,16 +167,15 @@ class Client(threading.local):
         @param debug: whether to display error messages when a server
         can't be contacted.
         @param pickleProtocol: number to mandate protocol used by
-        (c)Pickle.
+        Pickle.
         @param pickler: optional override of default Pickler to allow
         subclassing.
         @param unpickler: optional override of default Unpickler to
         allow subclassing.
         @param pload: optional persistent_load function to call on
-        pickle loading.  Useful for cPickle since subclassing isn't
-        allowed.
+        pickle loading.  Useful since subclassing isn't allowed.
         @param pid: optional persistent_id function to call on pickle
-        storing.  Useful for cPickle since subclassing isn't allowed.
+        storing.  Useful since subclassing isn't allowed.
         @param dead_retry: number of seconds before retrying a
         blacklisted server. Default to 30 s.
         @param socket_timeout: timeout in seconds for all calls to a
@@ -237,14 +236,6 @@ class Client(threading.local):
         self.server_max_value_length = server_max_value_length
         if self.server_max_value_length is None:
             self.server_max_value_length = SERVER_MAX_VALUE_LENGTH
-
-        #  figure out the pickler style
-        file = BytesIO()
-        try:
-            pickler = self.pickler(file, protocol=self.pickleProtocol)
-            self.picklerIsKeyword = True
-        except TypeError:
-            self.picklerIsKeyword = False
 
     def _encode_key(self, key):
         if isinstance(key, tuple):
@@ -978,10 +969,7 @@ class Client(threading.local):
         else:
             flags |= Client._FLAG_PICKLE
             file = BytesIO()
-            if self.picklerIsKeyword:
-                pickler = self.pickler(file, protocol=self.pickleProtocol)
-            else:
-                pickler = self.pickler(file, self.pickleProtocol)
+            pickler = self.pickler(file, protocol=self.pickleProtocol)
             if self.persistent_id:
                 pickler.persistent_id = self.persistent_id
             pickler.dump(val)
