@@ -1,5 +1,7 @@
 Unreleased
 
+   * Added testing for Python 3.14.
+
    * Removed Python 3.9 support.
 
 Sun, 14 Jan 2024 08:49:00 -0700  Sean Reifschneider  <jafo00@gmail.com>
