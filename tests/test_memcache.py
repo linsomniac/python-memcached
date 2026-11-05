@@ -41,6 +41,17 @@ class TestMemcache(unittest.TestCase):
         self.check_setget("an_integer", 42)
         self.check_setget("an_integer_2", 42, noreply=True)
 
+    def test_get_slabs(self):
+        self.assertTrue(self.mc.set('slab-item', 'value'))
+        stats = self.mc.get_slabs()
+        self.assertEqual(len(stats), 1)
+        self.assertTrue(stats[0][1])
+        for slab in stats[0][1].values():
+            self.assertIsInstance(slab['number'], str)
+            self.assertGreaterEqual(int(slab['number']), 1)
+        # Reading another response reuses the same, fully consumed connection.
+        self.assertIn('version', self.mc.get_stats()[0][1])
+
     def test_quit_all(self):
         self.mc.quit_all()
 
