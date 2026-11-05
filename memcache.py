@@ -384,6 +384,8 @@ class Client(threading.local):
             readline = s.readline
             while True:
                 line = readline()
+                if line:
+                    line = line.decode('ascii')
                 if not line or line.strip() == 'END':
                     break
                 item = line.split(' ', 2)
